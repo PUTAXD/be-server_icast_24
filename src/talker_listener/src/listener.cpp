@@ -1,9 +1,10 @@
 #include "ros/ros.h"
-#include "std_msgs/String.h"
+#include "talker_listener/Message.h"
 
-void chatterCallback(const std_msgs::String::ConstPtr& msg)
+void chatterCallback(const talker_listener::Message::ConstPtr& msg)
 {
-  ROS_INFO("I heard: [%s]", msg->data.c_str());
+  ROS_INFO("I heard: [%s]", msg->first_name.c_str());
+  ROS_INFO("I heard: [%s]", msg->last_name.c_str());
 }
 
 int main(int argc, char **argv)
