@@ -1,12 +1,18 @@
 #include "ros/ros.h"
 #include "talker_listener/Message.h"
+#include "talker_listener/Callback.h"
 
 #include <sstream>
+
+void subCallback(const talker_listener::Callback::ConstPtr& msg){}
 
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "node_talker");
   ros::NodeHandle n;
+  
+  ros::Subscriber sub = n.subscribe<talker_listener::Callback>("pub_topic_listener",1000, subCallback);
+  
   ros::Publisher chatter_pub = n.advertise<talker_listener::Message>("topic_chatter", 1000);
 
   ros::Rate loop_rate(10);

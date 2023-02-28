@@ -51,8 +51,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   Message.msg
-#   Message1.msg
-#   Message2.msg
+  Callback.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -144,7 +143,6 @@ target_link_libraries(talker ${catkin_LIBRARIES})
 add_executable(listener src/listener.cpp)
 target_link_libraries(listener ${catkin_LIBRARIES})
 # add_dependencies(listener beginner_tutorials_generate_messages_cpp)
-
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
