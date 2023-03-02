@@ -10,16 +10,17 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "node_talker");
   ros::NodeHandle n;
+  ros::Timer tim_pub;
   
   ros::Subscriber sub = n.subscribe<talker_listener::Callback>("pub_topic_listener",1000, subCallback);
-  
+  ros::MultiThreadedSpinner spinner(4);
+
   ros::Publisher chatter_pub = n.advertise<talker_listener::Message>("topic_chatter", 1000);
 
   ros::Rate loop_rate(10);
 
   int count = 0;
-  while (ros::ok())
-  {
+  tim_pub = n.createTimer(ros::Duration(0.1), [&](const ros::TimerEvent& event) {
     talker_listener::Message msg2;
 
     std::stringstream ss;
@@ -36,12 +37,9 @@ int main(int argc, char **argv)
 
     chatter_pub.publish(msg2);
 
-    ros::spinOnce();
-
-    loop_rate.sleep();
     ++count;
-  }
+  });
 
-
+  spinner.spin();
   return 0;
 }

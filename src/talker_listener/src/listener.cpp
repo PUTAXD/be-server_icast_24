@@ -22,18 +22,6 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(10);
 
   int counter = 0;
-  // while (ros::ok())
-  // {
-  //   counter++;
-  //   talker_listener::Callback msg;
-  //   msg.number1 = counter % 200;
-  //   msg.number2 = counter + 10 % 215;
-  //   msg.number3 = counter + 111 % 100;
-
-  //   ROS_INFO("%d", msg.number1);
-  //   pub.publish(msg);
-  // }
-
   tim_pub = n.createTimer(ros::Duration(0.1), [&](const ros::TimerEvent& event) {
     counter++;
     talker_listener::Callback msg;
@@ -48,11 +36,6 @@ int main(int argc, char **argv)
     pub.publish(msg);
   });
 
-
-  
-
-  // ros::spin();
   spinner.spin();
-
   return 0;
 }
