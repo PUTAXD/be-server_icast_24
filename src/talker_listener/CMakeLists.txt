@@ -69,7 +69,7 @@ add_message_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
+generate_messages(# roslaunch
   DEPENDENCIES
   std_msgs  # Or other packages containing msgs
 )
@@ -77,7 +77,7 @@ generate_messages(
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
 ################################################
-
+# roslaunch
 ## To declare and build dynamic reconfigure parameters within this
 ## package, follow these steps:
 ## * In the file package.xml:
@@ -95,7 +95,7 @@ generate_messages(
 # )
 
 ###################################
-## catkin specific configuration ##
+## catkin specific configuration ### roslaunch
 ###################################
 ## The catkin_package macro generates cmake config files for your package
 ## Declare things to be passed to dependent projects
@@ -103,7 +103,7 @@ generate_messages(
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
+catkin_package(# roslaunch
 #  INCLUDE_DIRS include
 #  LIBRARIES talker_listener
 #  CATKIN_DEPENDS roscpp rospy
@@ -138,11 +138,11 @@ include_directories(
 
 add_executable(talker src/talker.cpp)
 target_link_libraries(talker ${catkin_LIBRARIES})
-# add_dependencies(talker beginner_tutorials_generate_messages_cpp)
+# add_dependencies(node_talker src/talker.cpp)
 
 add_executable(listener src/listener.cpp)
 target_link_libraries(listener ${catkin_LIBRARIES})
-# add_dependencies(listener beginner_tutorials_generate_messages_cpp)
+# add_dependencies(listener src/listener.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
