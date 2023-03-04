@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include <stdio.h>
+#include <iostream>
 #include <stdlib.h>
 #include "ros/ros.h"
 
@@ -69,8 +70,34 @@ int main(int argc, char *argv[]){
     /* Read from the socket. */
         char recv_buf[64];
         uint8_t nrecv = recvfrom(sd, recv_buf, 64, MSG_DONTWAIT, &src_addr, &addr_len);
+        
+        int16_t var_1; 
+        int var_2; 
+        int16_t var_3; 
+        int8_t var_4; 
+        int counter = 0;
         if(nrecv > 0 && nrecv < 255) {
-            ROS_INFO("%s\n", recv_buf);
+            // ROS_INFO("%s\n", recv_buf);
+            memcpy(&var_1, recv_buf + counter, sizeof(int16_t));
+            counter += sizeof(int16_t);
+
+            memcpy(&var_2, recv_buf + counter, sizeof(int32_t));
+            counter += sizeof(int32_t);
+
+            memcpy(&var_4, recv_buf + counter, sizeof(int8_t));
+            counter += sizeof(int8_t);
+
+            memcpy(&var_3, recv_buf + counter,  sizeof(int16_t));
+            counter += sizeof(int16_t);
+
+
+            std::cout << "var 1 = " << var_1 << std::endl;
+            std::cout << "var 2 = " << var_2 << std::endl;
+            std::cout << "var 3 = " << var_3 << std::endl;
+            ROS_INFO("var 3 =  %d\n", var_4);
+            // std::cout << "var 4 = " << var_4 << std::endl;
+            std::cout << "counter = " << counter << std::endl;
+            std::cout << sizeof(int16_t)<<" + " << sizeof(uint8_t) << std::endl; 
         }
     });
 
