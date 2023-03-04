@@ -5,8 +5,6 @@
 
 void chatterCallback(const talker_listener::Message::ConstPtr& msg)
 {
-  ROS_INFO("I heard: [%s]", msg->first_name.c_str());
-  ROS_INFO("I heard: [%s]", msg->last_name.c_str());
 }
 
 int main(int argc, char **argv)
@@ -29,10 +27,6 @@ int main(int argc, char **argv)
     msg.number2 = counter + 10 % 215;
     msg.number3 = counter + 111 % 100;
 
-    ROS_INFO("%d", msg.number1);
-    ROS_INFO("%d", msg.number2);
-    ROS_INFO("%d", msg.number3);
-    printf("\n");
     pub.publish(msg);
   });
 

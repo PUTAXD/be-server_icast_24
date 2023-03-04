@@ -32,9 +32,6 @@ int main(int argc, char **argv)
     msg2.age = (count * 2) % 200;
     msg2.score = count * 2;
 
-    ROS_INFO("%s", msg2.first_name.c_str());
-    ROS_INFO("%s", msg2.last_name.c_str());
-
     chatter_pub.publish(msg2);
 
     ++count;
