@@ -13,6 +13,9 @@ int sd;
 int datalen;
 char databuf[1024];
 
+struct sockaddr src_addr;
+socklen_t addr_len = sizeof(src_addr);
+
 int main(int argc, char *argv[]){
     ros::init(argc, argv, "multicast");
     ros::NodeHandle n;
@@ -64,14 +67,10 @@ int main(int argc, char *argv[]){
 
     timer_cllbck = n.createTimer(ros::Duration(0.01), [&](const ros::TimerEvent& event){
     /* Read from the socket. */
-        datalen = sizeof(databuf);
-        if(read(sd, databuf, datalen) < 0){
-            perror("Reading datagram message error");
-            close(sd);
-            exit(1);
-        }else{
-            printf("Reading datagram message...OK.\n");
-            printf("The message from multicast server is: \"%s\"\n", databuf);
+        char recv_buf[64];
+        uint8_t nrecv = recvfrom(sd, recv_buf, 64, MSG_DONTWAIT, &src_addr, &addr_len);
+        if(nrecv > 0 && nrecv < 255) {
+            ROS_INFO("%s\n", recv_buf);
         }
     });
 
