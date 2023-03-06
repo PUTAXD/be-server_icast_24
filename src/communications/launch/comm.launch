@@ -1,0 +1,8 @@
+<launch>
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" > 
+        <arg name="port" value="9090"/>
+    </include>
+
+    <!-- <node name="comm_refbox" pkg="communications" type="comm_refbox" output="screen" respawn="true"/> -->
+    <node name="comm_multicast" pkg="communications" type="comm_multicast" output="screen" respawn="true"/>
+</launch>
