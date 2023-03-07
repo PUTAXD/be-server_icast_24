@@ -2,7 +2,11 @@
   "configurations": [
     {
       "name": "Linux",
-      "includePath": ["${workspaceFolder}/**", "/opt/ros/noetic/**"],
+      "includePath": [
+        "${workspaceFolder}/**",
+        "/opt/ros/noetic/**",
+        "/usr/include/**"
+      ],
       "defines": [],
       "compilerPath": "/usr/bin/gcc",
       "cStandard": "c17",
