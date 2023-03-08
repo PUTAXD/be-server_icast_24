@@ -1,0 +1,14 @@
+int16 bola_x_pada_lapangan
+int16 bola_y_pada_lapangan
+int8 n_robot_umpan
+int8 n_robot_terima
+int8 n_robot_aktif
+int8 n_robot_dekat_bola
+int8 n_robot_dapat_bola
+int8 n_array_robot_dekat_bola
+uint16 mux1
+uint16 mux2
+uint16 mux_role
+uint16 mux_n_robot_closer
+uint16[5] mux_bs_control_robot
+int64 pass_counter

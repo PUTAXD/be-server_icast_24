@@ -50,8 +50,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  # FE2BE.msg
-  BE2FE.msg
+  FE2BE.msg
+  Collection.msg
+  EntityRobot.msg
 )
 
 ## Generate services in the 'srv' folder

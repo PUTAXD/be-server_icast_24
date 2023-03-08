@@ -23,7 +23,7 @@ int main(int argc, char *argv[]){
 
     openSocket();
     
-    timer_cllbck_rcv = n.createTimer(ros::Duration(0.001), cllbckRcvMtcast);
+    timer_cllbck_rcv = n.createTimer(ros::Duration(0.01), cllbckRcvMtcast);
 
     bs2pc_sub = n.subscribe("bs2pc", 1000, cllbckSndMtcast);
 
@@ -45,73 +45,96 @@ void cllbckRcvMtcast(const ros::TimerEvent& event){
     if((nrecv > 0 && nrecv < 255) && (recv_buf[3] > '0' && recv_buf[3] <= '5') && (recv_buf[0] == 'i' && recv_buf[1] == 't' && recv_buf[2] == 's')) {
         uint8_t n_robot = recv_buf[3] - '0';
         int counter = 4;
+        int data_size = 0;
 
-        memcpy(&pc2bs_msg.epoch, recv_buf + counter, sizeof(int64_t));
-        counter += sizeof(int64_t);
+        data_size = sizeof(int64_t);
+        memcpy(&pc2bs_msg.epoch, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.pos_x, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.pos_x, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.pos_y, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.pos_y, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.theta, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.theta, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.status_bola, recv_buf + counter, sizeof(uint8_t));
-        counter += sizeof(uint8_t);
+        data_size = sizeof(uint8_t);
+        memcpy(&pc2bs_msg.status_bola, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.bola_x, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.bola_x, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.bola_y, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.bola_y, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.robot_condition, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.robot_condition, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.target_umpan, recv_buf + counter, sizeof(uint8_t));
-        counter += sizeof(uint8_t);
+        data_size = sizeof(uint8_t);
+        memcpy(&pc2bs_msg.target_umpan, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.index_point, recv_buf + counter, sizeof(uint8_t));
-        counter += sizeof(uint8_t);
+        data_size = sizeof(uint8_t);
+        memcpy(&pc2bs_msg.index_point, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.obs_length, recv_buf + counter, sizeof(uint8_t));
-        counter += sizeof(uint8_t);
+        data_size = sizeof(uint8_t);
+        memcpy(&pc2bs_msg.obs_length, recv_buf + counter, data_size);
+        counter += data_size;
         
         int16_t obs_dist = 0;
         uint8_t obs_index = 0;
         pc2bs_msg.obs_dist.clear();
         pc2bs_msg.obs_index.clear();
 
-        for(int i = 0; i < pc2bs_msg.obs_length; i++){
-            memcpy(&obs_dist, recv_buf + counter, sizeof(int16_t));
-            counter += sizeof(int16_t);
+        uint8_t obs_length = pc2bs_msg.obs_length;
+        for(int i = 0; i < obs_length; i++){
+            data_size = sizeof(int16_t);
+            memcpy(&obs_dist, recv_buf + counter, data_size);
+            counter += data_size;
 
-            memcpy(&obs_index, recv_buf + counter, sizeof(uint8_t));
-            counter += sizeof(uint8_t);
+            data_size = sizeof(uint8_t);
+            memcpy(&obs_index, recv_buf + counter, data_size);
+            counter += data_size;
 
             pc2bs_msg.obs_dist.push_back(obs_dist);
             pc2bs_msg.obs_index.push_back(obs_index);
         }
 
-        memcpy(&pc2bs_msg.battery_health, recv_buf + counter, sizeof(float_t));
-        counter += sizeof(float_t);
+        data_size = sizeof(float_t);
+        memcpy(&pc2bs_msg.battery_health, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.pos_x_odom, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.pos_x_odom, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.pos_y_odom, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.pos_y_odom, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.pos_theta_odom, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.pos_theta_odom, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.vx_icp, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.vx_icp, recv_buf + counter, data_size);
+        counter += data_size;
 
-        memcpy(&pc2bs_msg.vy_icp, recv_buf + counter, sizeof(int16_t));
-        counter += sizeof(int16_t);
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.vy_icp, recv_buf + counter, data_size);
+        counter += data_size;
+
+        pc2bs_msg.n_robot = n_robot;
 
         pc2bs_pub[n_robot-1].publish(pc2bs_msg);
     }
@@ -133,6 +156,10 @@ void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg){
 
     data_size = sizeof(int8_t);
     memcpy(send_buf + counter, &msg->command, data_size);
+    counter += data_size;
+
+    data_size = sizeof(int8_t);
+    memcpy(send_buf + counter, &msg->style, data_size);
     counter += data_size;
 
     data_size = sizeof(int16_t);
@@ -179,19 +206,19 @@ void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg){
     memcpy(send_buf + counter, &msg->mux_bs_control, data_size);
     counter += data_size;
 
-    for (uint8_t i = 0; i < 5; i++){
+    for (uint8_t i = 0; i < N_ROBOT; i++){
         data_size = sizeof(uint8_t);
         memcpy(send_buf + counter, &msg->control_v_linear[i], data_size);
         counter += data_size;
     }
 
-    for (uint8_t i = 0; i < 5; i++){
+    for (uint8_t i = 0; i < N_ROBOT; i++){
         data_size = sizeof(uint8_t);
         memcpy(send_buf + counter, &msg->control_v_angular[i], data_size);
         counter += data_size;
     }
 
-    for (uint8_t i = 0; i < 5; i++){
+    for (uint8_t i = 0; i < N_ROBOT; i++){
         data_size = sizeof(uint8_t);
         memcpy(send_buf + counter, &msg->control_power_kicker[i], data_size);
         counter += data_size;

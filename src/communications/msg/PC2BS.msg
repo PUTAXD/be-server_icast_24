@@ -1,3 +1,4 @@
+uint8 n_robot
 int64 epoch
 int16 pos_x
 int16 pos_y

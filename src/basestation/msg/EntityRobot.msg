@@ -1,7 +1,7 @@
 uint8[5] is_active
-int8 n_robot_teman
-int8 role
-int64 bs_time
+int8[5] n_robot_teman
+int8[5] role
+int64[5] time_coming
 int16[] obs_x_r1
 int16[] obs_y_r1
 int16[] obs_x_r2
@@ -22,18 +22,3 @@ int16[] group_obs_x_4
 int16[] group_obs_y_4
 int16[] group_obs_x_5
 int16[] group_obs_y_5
-
-int16 bola_x_pada_lapangan
-int16 bola_y_pada_lapangan
-int8 n_robot_umpan
-int8 n_robot_terima
-int8 n_robot_aktif
-int8 n_robot_dekat_bola
-int8 n_robot_dapat_bola
-int8 n_array_robot_dekat_bola
-uint16 mux1
-uint16 mux2
-uint16 mux_role
-uint16 mux_n_robot_closer
-uint16[5] mux_bs_control_robot
-int64 pass_counter
