@@ -18,10 +18,12 @@ void setMux2();
 void setMuxNRobotCloser();
 void setMuxNRobotControlledBS();
 void setObs();
-void getObsGroup();
 void setCounterPass();
 
 void setNRobotFriend(uint8_t robot_ind);
 
 uint8_t getNRobotCloser(uint8_t robot_ind);
+void getObsGroup();
+
 int pythagoras(int x1, int y1, int x2, int y2);
+uint8_t *isBallCatched();

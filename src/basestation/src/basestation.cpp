@@ -102,7 +102,7 @@ void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr& msg){
     entity_robot.time_coming[robot_ind] = time_now.count();
 }
 
-/* Update Data Global */
+/* Update/setter Data Global */
 
 void setNRobotData(){
     std::chrono::seconds time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -128,7 +128,21 @@ void setNRobotData(){
     cllction_data.n_robot_aktif = n_robot_active;
 }
 
-void setBallInField(){};
+void setBallInField(){
+    /*  
+        isBallCatched[0] = status
+        isBallCatched[1] = index robot
+    */
+    uint8_t* is_ball_catched = isBallCatched();
+    if(is_ball_catched[0]){
+        cllction_data.n_robot_dapat_bola = is_ball_catched[1] + 1;
+        cllction_data.n_robot_dekat_bola = is_ball_catched[1] + 1;
+
+        cllction_data.bola_x_pada_lapangan = pc2bs_msg[is_ball_catched[1]].bola_x;
+        cllction_data.bola_y_pada_lapangan = pc2bs_msg[is_ball_catched[1]].bola_y;
+
+    }
+};
 
 void setRole(){};
 
@@ -141,8 +155,6 @@ void setMuxNRobotCloser(){};
 void setMuxNRobotControlledBS(){};
 
 void setObs(){};
-
-void getObsGroup(){};
 
 void setCounterPass(){};
 
@@ -174,10 +186,25 @@ uint8_t getNRobotCloser(uint8_t robot_ind){
     return n_robot_closer;
 }
 
+void getObsGroup(){};
+
 /* Formula function */
 int pythagoras(int x1, int y1, int x2, int y2){
     int x = x1 - x2;
     int y = y1 - y2;
     int z = sqrt(pow(x, 2) + pow(y, 2));
     return z;
+}
+
+uint8_t *isBallCatched(){
+    static uint8_t is_ball_catched[2] = {0, 0};
+    is_ball_catched[0] = 0;
+    is_ball_catched[1] = 0;
+    for(uint8_t i=1; i<N_ROBOT; i++){
+        if(pc2bs_msg[i].status_bola == 2){
+            is_ball_catched[0] = 1;
+            is_ball_catched[1] = i;
+        }
+    }
+    return is_ball_catched;
 }
