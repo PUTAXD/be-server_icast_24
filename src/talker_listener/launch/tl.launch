@@ -1,4 +1,8 @@
 <launch>
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" > 
+        <arg name="port" value="9090"/>
+    </include>
+
     <node name="listener" pkg="talker_listener" type="listener" output="screen" respawn="true"/>
     <node name="talker" pkg="talker_listener" type="talker" output="screen" respawn="true"/>
 </launch>
