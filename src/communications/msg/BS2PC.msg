@@ -1,0 +1,19 @@
+int8 header_manual_and_calibration
+int8 command
+int8 style
+int16 ball_x_in_field
+int16 ball_y_in_field
+int16 target_manual_x
+int16 target_manual_y
+int16 target_manual_theta
+int16 offset_robot_x
+int16 offset_robot_y
+int16 offset_robot_theta
+uint16 mux1
+uint16 mux2
+uint16 mux_bs_control
+uint8[5] control_v_linear
+uint8[5] control_v_angular
+uint8[5] control_power_kicker
+uint8 passing_counter
+

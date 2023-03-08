@@ -1,0 +1,16 @@
+uint8 header_manual
+int32 command
+int32 style
+uint8 auto_kalibrasi
+uint8 connect_refbox
+uint8 n_robot_manual
+int16 target_manual_x
+int16 target_manual_y
+int16 target_manual_theta
+int16 odometry_offset_robot_x
+int16 odometry_offset_robot_y
+int16 odometry_offset_robot_theta
+uint8[5] trim_kecepatan_robot
+uint8[5] trim_kecepatan_sudut_robot
+uint8[5] trim_penendang_robot
+uint8[5] status_control_robot
