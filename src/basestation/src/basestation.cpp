@@ -3,6 +3,8 @@
 #define N_ROBOT 5
 
 ros::Subscriber pc2bs[N_ROBOT];
+ros::Subscriber fe2be_sub;
+
 ros::Publisher bs2pc_pub;
 ros::Publisher cllction_pub;
 ros::Publisher entity_robot_pub;
@@ -21,6 +23,7 @@ int main(int argc, char *argv[]){
     ros::NodeHandle n;
     ros::MultiThreadedSpinner spinner(4);
 
+    fe2be_sub = n.subscribe("ui2server", 1000, cllbckRcvFE2BE);
     for(uint8_t i=0; i<N_ROBOT; i++){
         char str_topic[100];
         sprintf(str_topic, "pc2bs_r%d", i+1);
@@ -35,43 +38,6 @@ int main(int argc, char *argv[]){
 
     spinner.spin();
     return 0;
-}
-
-void cllbckSndBS2PC(const ros::TimerEvent& event){
-    bs2pc_msg.header_manual_and_calibration = 0;
-    bs2pc_msg.command = 1;
-    bs2pc_msg.ball_x_in_field = 2;
-    bs2pc_msg.ball_y_in_field = 3;
-    bs2pc_msg.target_manual_x = 4;
-    bs2pc_msg.target_manual_y = 5;
-    bs2pc_msg.target_manual_theta = 6;
-    bs2pc_msg.offset_robot_x = 7;
-    bs2pc_msg.offset_robot_y = 8;
-    bs2pc_msg.offset_robot_theta = 9;
-    bs2pc_msg.mux1 = 12;
-    bs2pc_msg.mux2 = 13;
-    bs2pc_msg.mux_bs_control = 14;
-    bs2pc_msg.control_v_linear = {15, 16, 17, 18, 19};
-    bs2pc_msg.control_v_angular = {20, 21, 22, 23, 24};
-    bs2pc_msg.control_power_kicker = {25, 26, 27, 28, 29};
-    bs2pc_msg.passing_counter = 30;
-
-    bs2pc_pub.publish(bs2pc_msg);
-    entity_robot_pub.publish(entity_robot);
-    cllction_pub.publish(cllction_data);
-}
-
-void cllbckUpdateData(const ros::TimerEvent& event){
-    setNRobotData();
-    setBallInField();
-    setRole();
-    setMux1();
-    setMux2();
-    setMuxNRobotCloser();
-    setMuxNRobotControlledBS();
-    setObs();
-    getObsGroup();
-    setCounterPass();
 }
 
 void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr& msg){
@@ -100,6 +66,53 @@ void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr& msg){
     entity_robot.is_active[robot_ind] = 1;
     std::chrono::seconds time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
     entity_robot.time_coming[robot_ind] = time_now.count();
+}
+
+
+void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr& msg){
+    fe2bs_msg.header_manual = msg->header_manual;
+    fe2bs_msg.command = msg->command;
+    fe2bs_msg.style = msg->style;
+    fe2bs_msg.connect_refbox = msg->connect_refbox;
+    fe2bs_msg.n_robot_manual = msg->n_robot_manual;
+    fe2bs_msg.target_manual_x = msg->target_manual_x;
+    fe2bs_msg.target_manual_y = msg->target_manual_y;
+    fe2bs_msg.target_manual_theta = msg->target_manual_theta;
+    fe2bs_msg.odometry_offset_robot_x = msg->odometry_offset_robot_x;
+    fe2bs_msg.odometry_offset_robot_y = msg->odometry_offset_robot_y;
+    fe2bs_msg.odometry_offset_robot_theta = msg->odometry_offset_robot_theta;
+    for(uint8_t i=0; i<N_ROBOT; i++){
+        fe2bs_msg.trim_kecepatan_robot[i] = msg->trim_kecepatan_robot[i];
+    }
+    for(uint8_t i=0; i<N_ROBOT; i++){
+        fe2bs_msg.trim_kecepatan_sudut_robot[i] = msg->trim_kecepatan_sudut_robot[i];
+    }
+    for(uint8_t i=0; i<N_ROBOT; i++){
+        fe2bs_msg.trim_penendang_robot[i] = msg->trim_penendang_robot[i];
+    }
+    for(uint8_t i=0; i<N_ROBOT; i++){
+        fe2bs_msg.status_control_robot[i] = msg->status_control_robot[i];
+    }
+}
+
+void cllbckSndBS2PC(const ros::TimerEvent& event){
+    entity_robot_pub.publish(entity_robot);
+    cllction_pub.publish(cllction_data);
+    bs2pc_pub.publish(bs2pc_msg);
+}
+
+void cllbckUpdateData(const ros::TimerEvent& event){
+    setNRobotData();
+    setBallInField();
+    setRole();
+    setMux1();
+    setMux2();
+    setMuxNRobotCloser();
+    setMuxNRobotControlledBS();
+    setObs();
+    getObsGroup();
+    setCounterPass();
+    setBS2PC();
 }
 
 /* Update/setter Data Global */
@@ -157,6 +170,37 @@ void setMuxNRobotControlledBS(){};
 void setObs(){};
 
 void setCounterPass(){};
+
+void setBS2PC(){
+    /*
+        commented variable has been proceeding before
+    */
+    // bs2pc_msg.ball_x_in_field;
+    // bs2pc_msg.ball_y_in_field;
+    // bs2pc_msg.target_manual_x;
+    // bs2pc_msg.target_manual_y;
+    // bs2pc_msg.target_manual_theta;
+    // bs2pc_msg.mux1;
+    // bs2pc_msg.mux2;
+    // bs2pc_msg.mux_bs_control;
+    // bs2pc_msg.passing_counter;
+
+    bs2pc_msg.header_manual_and_calibration = 10;
+    bs2pc_msg.command = fe2bs_msg.command;
+    bs2pc_msg.style = fe2bs_msg.style;
+    bs2pc_msg.offset_robot_x = fe2bs_msg.odometry_offset_robot_x;
+    bs2pc_msg.offset_robot_y = fe2bs_msg.odometry_offset_robot_y;
+    bs2pc_msg.offset_robot_theta = fe2bs_msg.odometry_offset_robot_theta;
+    for(uint8_t i=0; i<N_ROBOT; i++){
+        bs2pc_msg.control_v_linear[i] = fe2bs_msg.trim_kecepatan_robot[i];
+    }
+    for(uint8_t i=0; i<N_ROBOT; i++){
+        bs2pc_msg.control_v_angular[i] = fe2bs_msg.trim_kecepatan_sudut_robot[i];
+    }
+    for(uint8_t i=0; i<N_ROBOT; i++){
+        bs2pc_msg.control_power_kicker[i] = fe2bs_msg.trim_penendang_robot[i];
+    }
+};
 
 /* Process Data which need sub function */
 void setNRobotFriend(uint8_t robot_ind){

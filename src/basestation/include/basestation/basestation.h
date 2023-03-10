@@ -7,6 +7,7 @@
 #include "basestation/EntityRobot.h"
 
 void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr& msg);
+void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr& msg);
 void cllbckSndBS2PC(const ros::TimerEvent& event);
 void cllbckUpdateData(const ros::TimerEvent& event);
 
@@ -19,6 +20,7 @@ void setMuxNRobotCloser();
 void setMuxNRobotControlledBS();
 void setObs();
 void setCounterPass();
+void setBS2PC();
 
 void setNRobotFriend(uint8_t robot_ind);
 

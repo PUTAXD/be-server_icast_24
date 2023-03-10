@@ -1,8 +1,8 @@
-uint8 header_manual
+bool header_manual
 int32 command
 int32 style
-uint8 auto_kalibrasi
-uint8 connect_refbox
+bool auto_kalibrasi
+bool connect_refbox
 uint8 n_robot_manual
 int16 target_manual_x
 int16 target_manual_y

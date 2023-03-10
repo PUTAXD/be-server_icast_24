@@ -137,8 +137,8 @@ include
 # add_executable(${PROJECT_NAME}_node src/communications_node.cpp)
 
 # in executables, the first argument is node name
-add_executable(comm_refbox src/comm_refbox.cpp)
-target_link_libraries(comm_refbox ${catkin_LIBRARIES})
+# add_executable(comm_refbox src/comm_refbox.cpp)
+# target_link_libraries(comm_refbox ${catkin_LIBRARIES})
 # add_dependencies(node_talker src/talker.cpp)
 
 add_executable(comm_multicast src/comm_multicast.cpp)
