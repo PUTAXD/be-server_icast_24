@@ -5,10 +5,11 @@
 #include "basestation/FE2BE.h"
 #include "basestation/Collection.h"
 #include "basestation/EntityRobot.h"
+#include <math.h>
 
-void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr& msg);
-void cllbckSndBS2PC(const ros::TimerEvent& event);
-void cllbckUpdateData(const ros::TimerEvent& event);
+void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg);
+void cllbckSndBS2PC(const ros::TimerEvent &event);
+void cllbckUpdateData(const ros::TimerEvent &event);
 
 void setNRobotData();
 void setBallInField();
@@ -27,3 +28,5 @@ void getObsGroup();
 
 int pythagoras(int x1, int y1, int x2, int y2);
 uint8_t *isBallCatched();
+uint8_t isCondition20Exist();
+uint8_t isRobotReady(uint8_t index_robot);

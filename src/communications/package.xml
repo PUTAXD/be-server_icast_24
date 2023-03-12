@@ -28,7 +28,7 @@
   <!-- <author email="jane.doe@example.com">Jane Doe</author> -->
 
 
-  <!-- The *depend tags are used to specify dependencies -->
+  <!-- The *depend tags are usead to specify dependencies -->
   <!-- Dependencies can be catkin packages or system dependencies -->
   <!-- Examples: -->
   <!-- Use depend as a shortcut for packages that are both build and exec dependencies -->
