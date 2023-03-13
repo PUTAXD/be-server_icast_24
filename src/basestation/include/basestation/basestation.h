@@ -6,10 +6,10 @@
 #include "basestation/Collection.h"
 #include "basestation/EntityRobot.h"
 
-void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr& msg);
-void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr& msg);
-void cllbckSndBS2PC(const ros::TimerEvent& event);
-void cllbckUpdateData(const ros::TimerEvent& event);
+void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg);
+void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg);
+void cllbckSndBS2PC(const ros::TimerEvent &event);
+void cllbckUpdateData(const ros::TimerEvent &event);
 
 void setNRobotData();
 void setBallInField();
