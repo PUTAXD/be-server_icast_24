@@ -18,28 +18,6 @@ basestation::FE2BE fe2bs_msg;
 basestation::Collection cllction_data;
 basestation::EntityRobot entity_robot;
 
-class CounterPass
-{
-public:
-    uint8_t prev_state;
-    std::time_t t1;
-    std::time_t t2;
-    uint16_t threshold_time_umpan;
-    uint16_t threshold_time_lepas;
-    bool sudah_umpan;
-    uint8_t pass_counter;
-
-    CounterPass() : prev_state(0),
-                    t1(0),
-                    t2(std::time(0)),
-                    threshold_time_umpan(5000),
-                    threshold_time_lepas(10000),
-                    sudah_umpan(false),
-                    pass_counter(0)
-    {
-    }
-};
-
 int main(int argc, char *argv[])
 {
     ros::init(argc, argv, "basestation");
@@ -62,31 +40,6 @@ int main(int argc, char *argv[])
 
     spinner.spin();
     return 0;
-}
-
-void cllbckSndBS2PC(const ros::TimerEvent &event)
-{
-    bs2pc_msg.header_manual_and_calibration = 0;
-    bs2pc_msg.command = 1;
-    bs2pc_msg.ball_x_in_field = 2;
-    bs2pc_msg.ball_y_in_field = 3;
-    bs2pc_msg.target_manual_x = 4;
-    bs2pc_msg.target_manual_y = 5;
-    bs2pc_msg.target_manual_theta = 6;
-    bs2pc_msg.offset_robot_x = 7;
-    bs2pc_msg.offset_robot_y = 8;
-    bs2pc_msg.offset_robot_theta = 9;
-    bs2pc_msg.mux1 = 12;
-    bs2pc_msg.mux2 = 13;
-    bs2pc_msg.mux_bs_control = 14;
-    bs2pc_msg.control_v_linear = {15, 16, 17, 18, 19};
-    bs2pc_msg.control_v_angular = {20, 21, 22, 23, 24};
-    bs2pc_msg.control_power_kicker = {25, 26, 27, 28, 29};
-    bs2pc_msg.passing_counter = 30;
-
-    bs2pc_pub.publish(bs2pc_msg);
-    entity_robot_pub.publish(entity_robot);
-    cllction_pub.publish(cllction_data);
 }
 
 void cllbckUpdateData(const ros::TimerEvent &event)
@@ -127,7 +80,7 @@ void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg)
     pc2bs_msg[robot_ind].vx_icp = msg->vx_icp;
     pc2bs_msg[robot_ind].vy_icp = msg->vy_icp;
 
-    entity_robot.is_active[robot_ind] = 1;
+    entity_robot.is_active[robot_ind] = true;
     std::chrono::seconds time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
     entity_robot.time_coming[robot_ind] = time_now.count();
 }
@@ -170,21 +123,6 @@ void cllbckSndBS2PC(const ros::TimerEvent &event)
     bs2pc_pub.publish(bs2pc_msg);
 }
 
-void cllbckUpdateData(const ros::TimerEvent &event)
-{
-    setNRobotData();
-    setBallInField();
-    setRole();
-    setMux1();
-    setMux2();
-    setMuxNRobotCloser();
-    setMuxNRobotControlledBS();
-    setObs();
-    getObsGroup();
-    setCounterPass();
-    setBS2PC();
-}
-
 /* Update/setter Data Global */
 
 void setNRobotData()
@@ -219,6 +157,43 @@ void setNRobotData()
     cllction_data.n_robot_aktif = n_robot_active;
 }
 
+struct RobotWithBall
+{
+    uint8_t n_robot;
+    float distance = 9999;
+};
+
+void setSortingBallDistance()
+{
+    struct RobotWithBall robots[5];
+    for (uint8_t i = 1; i < N_ROBOT; i++)
+    {
+        robots[i].n_robot = i;
+        if (isRobotReady(i))
+        {
+            robots[i].distance = pythagoras(pc2bs_msg[i].bola_x,
+                                            pc2bs_msg[i].bola_y,
+                                            pc2bs_msg[0].pos_x,
+                                            pc2bs_msg[0].pos_y);
+        }
+    }
+
+    std::sort(robots, robots + N_ROBOT, [](const RobotWithBall &a, const RobotWithBall &b)
+              { return a.distance < b.distance; });
+
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        if (robots[i].distance != 9999)
+        {
+            cllction_data.n_array_robot_dekat_bola[i] = robots[i].n_robot;
+        }
+        else
+        {
+            cllction_data.n_array_robot_dekat_bola[i] = 0;
+        }
+    }
+}
+
 void setBallInField()
 {
     /*
@@ -233,7 +208,40 @@ void setBallInField()
 
         cllction_data.bola_x_pada_lapangan = pc2bs_msg[is_ball_catched[1]].bola_x;
         cllction_data.bola_y_pada_lapangan = pc2bs_msg[is_ball_catched[1]].bola_y;
+
+        uint8_t *robot_target = getRobotTarget();
+        cllction_data.n_robot_umpan = robot_target[0];
+        cllction_data.n_robot_terima = robot_target[1];
     }
+    else if (isBallAppear())
+    {
+        uint8_t n_robot_closest_ball = getNRobotClosestBall();
+        cllction_data.n_robot_dapat_bola = 0;
+        cllction_data.n_robot_dekat_bola = n_robot_closest_ball;
+        if (n_robot_closest_ball)
+        {
+            cllction_data.bola_x_pada_lapangan = pc2bs_msg[n_robot_closest_ball - 1].bola_x;
+            cllction_data.bola_y_pada_lapangan = pc2bs_msg[n_robot_closest_ball - 1].bola_y;
+        }
+        else
+        {
+            cllction_data.bola_x_pada_lapangan = 0;
+            cllction_data.bola_y_pada_lapangan = 0;
+        }
+        cllction_data.n_robot_umpan = 0;
+        cllction_data.n_robot_terima = 0;
+    }
+    else
+    {
+        cllction_data.n_robot_dapat_bola = 0;
+        cllction_data.n_robot_dekat_bola = 0;
+        cllction_data.bola_x_pada_lapangan = 0;
+        cllction_data.bola_y_pada_lapangan = 0;
+        cllction_data.n_robot_umpan = 0;
+        cllction_data.n_robot_terima = 0;
+    }
+
+    setSortingBallDistance();
 };
 
 void setRole()
@@ -246,20 +254,15 @@ void setRole()
 
     if (!isCondition20Exist())
     {
-        uint8_t LEN_ARR_ROBOT_DEKAT_BOLA = sizeof(cllction_data.n_array_robot_dekat_bola) / sizeof(cllction_data.n_array_robot_dekat_bola[0]);
+        uint8_t LEN_ARR_ROBOT_DEKAT_BOLA = sizeof(cllction_data.n_array_robot_dekat_bola) /
+                                           sizeof(cllction_data.n_array_robot_dekat_bola[0]);
         uint8_t counter_role = 1;
 
         for (uint8_t i = 0; i < LEN_ARR_ROBOT_DEKAT_BOLA; i++)
         {
-            int8_t INDEX_ROBOT = cllction_data.n_array_robot_dekat_bola[i] - 1;
-
-            if (!isRobotReady(i))
+            if (cllction_data.n_array_robot_dekat_bola[i] != 0)
             {
-                entity_robot.role[i] = 0;
-            }
-
-            if (INDEX_ROBOT > 0 && isRobotReady(INDEX_ROBOT))
-            {
+                int8_t INDEX_ROBOT = cllction_data.n_array_robot_dekat_bola[i];
                 switch (counter_role)
                 {
                 case 1:
@@ -277,8 +280,12 @@ void setRole()
                 }
                 counter_role++;
             }
-            entity_robot.role[0] = 0;
+            if (!isRobotReady(i))
+            {
+                entity_robot.role[i] = 0;
+            }
         }
+        entity_robot.role[0] = 0;
     }
 };
 
@@ -465,6 +472,53 @@ void setNRobotFriend(uint8_t robot_ind)
 }
 
 /* GETTER function */
+uint8_t getNRobotClosestBall()
+{
+    uint8_t n_closest_ball = 0;
+    int distance_closest = INT_MAX;
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        if (isRobotReady(i) && pc2bs_msg[i].status_bola == 1)
+        {
+            int delta_distance = pythagoras(pc2bs_msg[i].bola_x, pc2bs_msg[i].bola_y, pc2bs_msg[i].pos_x, pc2bs_msg[i].pos_y);
+
+            if (delta_distance < distance_closest)
+            {
+                distance_closest = delta_distance;
+                n_closest_ball = i + 1;
+            }
+        }
+    }
+
+    // if there is no ball detected in robot main, then check keeper
+    if (n_closest_ball == 0 && isRobotReady(0) && pc2bs_msg[0].status_bola == 1)
+    {
+        n_closest_ball = 1;
+    }
+
+    return n_closest_ball;
+}
+
+uint8_t *getRobotTarget()
+{
+    /*
+        n_target[0] -> shooter
+        n_target[1] -> target
+    */
+
+    static uint8_t n_target[2] = {0, 0};
+    for (uint8_t i = 1; i < N_ROBOT; i++)
+    {
+        if (pc2bs_msg[i].target_umpan > 0 && pc2bs_msg[i].target_umpan < 6)
+        {
+            n_target[0] = i + 1;
+            n_target[1] = pc2bs_msg[i].target_umpan;
+            break;
+        }
+    }
+    return n_target;
+}
+
 uint8_t getNRobotCloser(uint8_t robot_ind)
 {
     uint8_t n_robot_closer = 0;
@@ -785,6 +839,19 @@ int pythagoras(int x1, int y1, int x2, int y2)
     int y = y1 - y2;
     int z = sqrt(pow(x, 2) + pow(y, 2));
     return z;
+}
+
+bool isBallAppear()
+{
+    bool is_ball_appear = false;
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        if (pc2bs_msg[i].status_bola == 1)
+        {
+            is_ball_appear = true;
+        }
+    }
+    return is_ball_appear;
 }
 
 uint8_t *isBallCatched()

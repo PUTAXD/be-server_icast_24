@@ -8,7 +8,6 @@ int8 n_robot_dapat_bola
 int8[5] n_array_robot_dekat_bola 
 uint16 mux1
 uint16 mux2
-uint16 mux_role
 uint16 mux_n_robot_closer
 uint16 mux_bs_control_robot
 int64 pass_counter
