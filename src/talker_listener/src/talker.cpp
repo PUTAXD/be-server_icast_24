@@ -4,15 +4,15 @@
 
 #include <sstream>
 
-void subCallback(const talker_listener::Callback::ConstPtr& msg){}
+void subCallback(const talker_listener::Callback::ConstPtr &msg) {}
 
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "node_talker");
   ros::NodeHandle n;
   ros::Timer tim_pub;
-  
-  ros::Subscriber sub = n.subscribe<talker_listener::Callback>("pub_topic_listener",1000, subCallback);
+
+  ros::Subscriber sub = n.subscribe<talker_listener::Callback>("pub_topic_listener", 1000, subCallback);
   ros::MultiThreadedSpinner spinner(4);
 
   ros::Publisher chatter_pub = n.advertise<talker_listener::Message>("topic_chatter", 1000);
@@ -20,7 +20,8 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(10);
 
   int count = 0;
-  tim_pub = n.createTimer(ros::Duration(0.1), [&](const ros::TimerEvent& event) {
+  tim_pub = n.createTimer(ros::Duration(0.1), [&](const ros::TimerEvent &event)
+                          {
     talker_listener::Message msg2;
 
     std::stringstream ss;
@@ -34,8 +35,7 @@ int main(int argc, char **argv)
 
     chatter_pub.publish(msg2);
 
-    ++count;
-  });
+    ++count; });
 
   spinner.spin();
   return 0;

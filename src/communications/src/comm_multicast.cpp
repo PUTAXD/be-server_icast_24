@@ -10,10 +10,11 @@ communications::PC2BS pc2bs_msg;
 ros::Subscriber bs2pc_sub;
 ros::Publisher pc2bs_pub[N_ROBOT];
 
-void cllbckRcvMtcast(const ros::TimerEvent& event);
-void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg);
+void cllbckRcvMtcast(const ros::TimerEvent &event);
+void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg);
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[])
+{
     ros::init(argc, argv, "comm_multicast");
     ros::NodeHandle n;
     ros::MultiThreadedSpinner spinner(4);
@@ -22,14 +23,15 @@ int main(int argc, char *argv[]){
     ros::Timer timer_cllbck_snd;
 
     openSocket();
-    
+
     timer_cllbck_rcv = n.createTimer(ros::Duration(0.01), cllbckRcvMtcast);
 
     bs2pc_sub = n.subscribe("bs2pc", 1000, cllbckSndMtcast);
 
-    for(int i = 0; i < N_ROBOT; i++){
+    for (int i = 0; i < N_ROBOT; i++)
+    {
         char str_topic[100];
-        sprintf(str_topic, "pc2bs_r%d", i+1);
+        sprintf(str_topic, "pc2bs_r%d", i + 1);
         pc2bs_pub[i] = n.advertise<communications::PC2BS>(str_topic, 1000);
     }
 
@@ -38,11 +40,13 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-void cllbckRcvMtcast(const ros::TimerEvent& event){
+void cllbckRcvMtcast(const ros::TimerEvent &event)
+{
     char recv_buf[LEN_MSG];
     uint8_t nrecv = recvfrom(sd, recv_buf, LEN_MSG, MSG_DONTWAIT, &src_addr, &addr_len);
-    
-    if((nrecv > 0 && nrecv < 255) && (recv_buf[3] > '0' && recv_buf[3] <= '5') && (recv_buf[0] == 'i' && recv_buf[1] == 't' && recv_buf[2] == 's')) {
+
+    if ((nrecv > 0 && nrecv < 255) && (recv_buf[3] > '0' && recv_buf[3] <= '5') && (recv_buf[0] == 'i' && recv_buf[1] == 't' && recv_buf[2] == 's'))
+    {
         uint8_t n_robot = recv_buf[3] - '0';
         int counter = 4;
         int data_size = 0;
@@ -90,14 +94,15 @@ void cllbckRcvMtcast(const ros::TimerEvent& event){
         data_size = sizeof(uint8_t);
         memcpy(&pc2bs_msg.obs_length, recv_buf + counter, data_size);
         counter += data_size;
-        
+
         int16_t obs_dist = 0;
         uint8_t obs_index = 0;
         pc2bs_msg.obs_dist.clear();
         pc2bs_msg.obs_index.clear();
 
         uint8_t obs_length = pc2bs_msg.obs_length;
-        for(int i = 0; i < obs_length; i++){
+        for (int i = 0; i < obs_length; i++)
+        {
             data_size = sizeof(int16_t);
             memcpy(&obs_dist, recv_buf + counter, data_size);
             counter += data_size;
@@ -136,11 +141,12 @@ void cllbckRcvMtcast(const ros::TimerEvent& event){
 
         pc2bs_msg.n_robot = n_robot;
 
-        pc2bs_pub[n_robot-1].publish(pc2bs_msg);
+        pc2bs_pub[n_robot - 1].publish(pc2bs_msg);
     }
 }
 
-void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg){
+void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg)
+{
     int counter = 0;
     int data_size = 0;
 
@@ -149,7 +155,7 @@ void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg){
     data_size = 4;
     memcpy(send_buf, "its0", data_size);
     counter += data_size;
-    
+
     data_size = sizeof(int8_t);
     memcpy(send_buf + counter, &msg->header_manual_and_calibration, data_size);
     counter += data_size;
@@ -206,19 +212,22 @@ void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg){
     memcpy(send_buf + counter, &msg->mux_bs_control, data_size);
     counter += data_size;
 
-    for (uint8_t i = 0; i < N_ROBOT; i++){
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
         data_size = sizeof(uint8_t);
         memcpy(send_buf + counter, &msg->control_v_linear[i], data_size);
         counter += data_size;
     }
 
-    for (uint8_t i = 0; i < N_ROBOT; i++){
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
         data_size = sizeof(uint8_t);
         memcpy(send_buf + counter, &msg->control_v_angular[i], data_size);
         counter += data_size;
     }
 
-    for (uint8_t i = 0; i < N_ROBOT; i++){
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
         data_size = sizeof(uint8_t);
         memcpy(send_buf + counter, &msg->control_power_kicker[i], data_size);
         counter += data_size;
@@ -228,5 +237,5 @@ void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg){
     memcpy(send_buf + counter, &msg->passing_counter, data_size);
     counter += data_size;
 
-    uint sent = sendto(sd, send_buf, counter, 0, (struct sockaddr *) &localSock, sizeof(struct sockaddr));
+    uint sent = sendto(sd, send_buf, counter, 0, (struct sockaddr *)&localSock, sizeof(struct sockaddr));
 }

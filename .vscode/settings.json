@@ -70,7 +70,12 @@
     "cinttypes": "cpp",
     "typeindex": "cpp",
     "typeinfo": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "csignal": "cpp",
+    "codecvt": "cpp",
+    "forward_list": "cpp",
+    "future": "cpp",
+    "valarray": "cpp"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }
