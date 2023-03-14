@@ -127,7 +127,8 @@ void cllbckSndBS2PC(const ros::TimerEvent &event)
 
 void setNRobotData()
 {
-    std::chrono::seconds time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
+    std::chrono::seconds time_now =
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
     uint8_t timeout = 2;
 
     for (uint8_t i = 0; i < N_ROBOT; i++)
@@ -138,23 +139,27 @@ void setNRobotData()
             {
                 entity_robot.is_active[i] = 0;
             }
-            else
-            {
-                setNRobotFriend(i);
-            }
         }
+        setNRobotFriend(i);
     }
 
     uint8_t n_robot_active = 0;
+    uint8_t temp_robot_ready = 0;
     for (uint8_t i = 1; i < N_ROBOT; i++)
     {
         if (entity_robot.is_active[i])
         {
             n_robot_active++;
         }
+
+        if (isRobotReady(i))
+        {
+            temp_robot_ready++;
+        }
     }
 
     cllction_data.n_robot_aktif = n_robot_active;
+    cllction_data.n_robot_ready = temp_robot_ready;
 }
 
 struct RobotWithBall
@@ -294,7 +299,7 @@ void setMux1()
     uint8_t CONVERSION = 6;
     uint16_t mux = 0;
 
-    mux += cllction_data.n_robot_aktif;
+    mux += cllction_data.n_robot_ready;
     mux += cllction_data.n_robot_dekat_bola * CONVERSION;
     mux += cllction_data.n_robot_dapat_bola * CONVERSION * CONVERSION;
     mux += cllction_data.n_robot_umpan * CONVERSION * CONVERSION * CONVERSION;
@@ -461,7 +466,7 @@ void setBS2PC()
 void setNRobotFriend(uint8_t robot_ind)
 {
     uint8_t n_robot_friend = 0;
-    if (cllction_data.n_robot_aktif <= 1)
+    if (cllction_data.n_robot_ready <= 1 || !isRobotReady(robot_ind))
     {
         entity_robot.n_robot_teman[robot_ind] = 0;
     }
@@ -526,7 +531,7 @@ uint8_t getNRobotCloser(uint8_t robot_ind)
 
     for (uint8_t i = 1; i < N_ROBOT; i++)
     {
-        if (i != robot_ind && entity_robot.is_active[i])
+        if (i != robot_ind && isRobotReady(i))
         {
             int distance = pythagoras(pc2bs_msg[robot_ind].pos_x, pc2bs_msg[robot_ind].pos_y, pc2bs_msg[i].pos_x, pc2bs_msg[i].pos_y);
             if (distance < distance_closer)
@@ -537,7 +542,7 @@ uint8_t getNRobotCloser(uint8_t robot_ind)
         }
     }
 
-    return n_robot_closer;
+    return n_robot_closer + 1;
 }
 
 void getObsGroup()
