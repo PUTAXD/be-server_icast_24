@@ -35,8 +35,8 @@ int main(int argc, char *argv[])
     entity_robot_pub = n.advertise<basestation::EntityRobot>("entity_robot", 1000);
     cllction_pub = n.advertise<basestation::Collection>("collection", 1000);
 
-    timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.01), cllbckSndBS2PC);
-    timer_update_data = n.createTimer(ros::Duration(0.01), cllbckUpdateData);
+    timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.025), cllbckSndBS2PC);
+    timer_update_data = n.createTimer(ros::Duration(0.001), cllbckUpdateData);
 
     spinner.spin();
     return 0;
@@ -353,7 +353,7 @@ void setObs()
 {
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        uint8_t LEN_OBS = pc2bs_msg->obs_length;
+        uint8_t LEN_OBS = pc2bs_msg[i].obs_length;
         std::vector<int16_t> obs_x;
         std::vector<int16_t> obs_y;
         obs_x.resize(LEN_OBS);
@@ -361,8 +361,8 @@ void setObs()
 
         for (uint8_t j = 0; j < LEN_OBS; j++)
         {
-            uint16_t dist = pc2bs_msg->obs_dist[j];
-            uint16_t angle = pc2bs_msg->obs_index[j] * 2.5;
+            uint16_t dist = pc2bs_msg[i].obs_dist[j];
+            uint16_t angle = pc2bs_msg[i].obs_index[j] * 2.5;
             int16_t x = dist * cos(((angle - 90) * M_PI) / 180);
             int16_t y = dist * sin(((angle - 90) * M_PI) / 180);
             obs_x[j] = x;
@@ -564,12 +564,12 @@ void getObsGroup()
         obs_angle_dummy.clear();
 
         // assign obs_dist & obs_angle
-        obs_dist_dummy = pc2bs_msg->obs_dist;
-        obs_angle_dummy.resize(pc2bs_msg->obs_length);
+        obs_dist_dummy = pc2bs_msg[i].obs_dist;
+        obs_angle_dummy.resize(pc2bs_msg[i].obs_length);
 
-        for (uint8_t j = 0; j < pc2bs_msg->obs_length; j++)
+        for (uint8_t j = 0; j < pc2bs_msg[i].obs_length; j++)
         {
-            uint16_t angle = pc2bs_msg->obs_index[j] * 2.5;
+            uint16_t angle = pc2bs_msg[i].obs_index[j] * 2.5;
             obs_angle_dummy[j] = angle;
         }
 
@@ -633,11 +633,12 @@ void getObsGroup()
             if (abs(obs_angle_dummy[0] - obs_angle_dummy[obs_angle_dummy.size() - 1]) <= angle_max &&
                 abs(obs_dist_dummy[0] - obs_dist_dummy[obs_dist_dummy.size() - 1]) <= dist_max)
             {
+                ROS_INFO("DISKONTINU");
                 uint8_t counter_up = 0;
                 uint8_t counter_down = 0;
                 uint8_t counter_mean = 0;
                 uint8_t index = 0;
-                uint8_t len_obs = pc2bs_msg->obs_length;
+                uint8_t len_obs = pc2bs_msg[i].obs_length;
 
                 // // depan
                 for (uint8_t i = 0; i < len_obs; i++)
@@ -770,6 +771,7 @@ void getObsGroup()
                     if (stop > start)
                     {
                         counter = stop - start;
+                        ROS_INFO("counter: %d", counter);
                         if (counter >= counter_offset)
                         {
                             uint8_t dist_mean = 0;
@@ -786,7 +788,7 @@ void getObsGroup()
                             dist_mean /= counter + 1;
                             angle_mean /= counter + 1;
 
-                            obs_dist_result.push_back(dist_mean + 10);
+                            obs_dist_result.push_back(dist_mean + 50);
                             obs_angle_result.push_back(angle_mean);
                         }
                     }
