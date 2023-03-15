@@ -1,82 +1,64 @@
 #include "ros/ros.h"
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <string.h>
+#include <iostream>
+#include <boost/array.hpp>
+#include <boost/asio.hpp>
 #include <nlohmann/json.hpp>
 #include <refbox/Message.h>
 
-using namespace std;
 using json = nlohmann::json;
 
-#define PORT 28097
+using boost::asio::ip::tcp;
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
   ros::init(argc, argv, "refbox_node");
   ros::NodeHandle nh;
 
-  uint16_t server_port = 28097;
-
-  int stat, valread, client_fd;
-  struct sockaddr_in serv_addr;
-  char buffer[1024] = {0};
-
-  serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(server_port);
-
   ros::Publisher pub_msg = nh.advertise<refbox::Message>("refbox_msg", 1000);
-
-  if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+  try
   {
-    ROS_INFO("\n Socket creation error \n");
-    return -1;
-  }
+    boost::asio::io_context io_context;
 
-  if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0)
-  {
-    ROS_INFO(
-        "\nInvalid address/ Address not supported \n");
-    return -1;
-  }
+    tcp::resolver resolver(io_context);
+    tcp::resolver::results_type endpoints =
+        resolver.resolve("127.0.0.1", "28097");
 
-  if ((stat = connect(client_fd, (struct sockaddr *)&serv_addr,
-                      sizeof(serv_addr))) < 0)
-  {
-    ROS_INFO("\nConnection Failed \n");
-    return -1;
-  }
+    tcp::socket socket(io_context);
+    boost::asio::connect(socket, endpoints);
 
-  ros::Rate loop_rate(10);
-  while (ros::ok())
-  {
-    refbox::Message msg;
-    valread = read(client_fd, buffer, 1024);
-    if (valread <= 0)
+    while (ros::ok())
     {
-      connect(client_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
-      ROS_INFO("Connection closed\n");
-      msg.command = "STOP";
-      msg.target_team = "";
-      msg.status = 0;
-    }
-    else
-    {
-      json j = json::parse(buffer);
-      msg.command = j["command"];
-      msg.target_team = j["targetTeam"];
+      refbox::Message msg;
+      boost::array<char, 128> buf;
+      boost::system::error_code error;
+
+      size_t len = socket.read_some(boost::asio::buffer(buf), error);
+
+      if (error == boost::asio::error::eof)
+      {
+        break; // Connection closed cleanly by peer.
+      }
+      else if (error)
+      {
+        throw boost::system::system_error(error); // Some other error.
+      }
+
+      // std::cout.write(buf.data(), len);
+      std::string message(buf.data(), len);
+      message = message.substr(0, message.size() - 1);
+      json ms_ref = json::parse(message);
+
+      msg.command = ms_ref["command"];
+      msg.target_team = ms_ref["targetTeam"];
       msg.status = 1;
-      ROS_INFO("%s\n", buffer);
+
+      pub_msg.publish(msg);
     }
-
-    pub_msg.publish(msg);
-    ros::spinOnce();
-
-    loop_rate.sleep();
+  }
+  catch (std::exception &e)
+  {
+    std::cerr << e.what() << std::endl;
   }
 
-  close(client_fd);
   return 0;
 }
