@@ -14,7 +14,7 @@ ros::Timer timer_update_data;
 
 communications::BS2PC bs2pc_msg;
 communications::PC2BS pc2bs_msg[N_ROBOT];
-basestation::FE2BE fe2bs_msg;
+basestation::FE2BE fe2be_msg;
 basestation::Collection cllction_data;
 basestation::EntityRobot entity_robot;
 
@@ -87,32 +87,32 @@ void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg)
 
 void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg)
 {
-    fe2bs_msg.header_manual = msg->header_manual;
-    fe2bs_msg.command = msg->command;
-    fe2bs_msg.style = msg->style;
-    fe2bs_msg.connect_refbox = msg->connect_refbox;
-    fe2bs_msg.n_robot_manual = msg->n_robot_manual;
-    fe2bs_msg.target_manual_x = msg->target_manual_x;
-    fe2bs_msg.target_manual_y = msg->target_manual_y;
-    fe2bs_msg.target_manual_theta = msg->target_manual_theta;
-    fe2bs_msg.odometry_offset_robot_x = msg->odometry_offset_robot_x;
-    fe2bs_msg.odometry_offset_robot_y = msg->odometry_offset_robot_y;
-    fe2bs_msg.odometry_offset_robot_theta = msg->odometry_offset_robot_theta;
+    fe2be_msg.header_manual = msg->header_manual;
+    fe2be_msg.command = msg->command;
+    fe2be_msg.style = msg->style;
+    fe2be_msg.connect_refbox = msg->connect_refbox;
+    fe2be_msg.n_robot_manual = msg->n_robot_manual;
+    fe2be_msg.target_manual_x = msg->target_manual_x;
+    fe2be_msg.target_manual_y = msg->target_manual_y;
+    fe2be_msg.target_manual_theta = msg->target_manual_theta;
+    fe2be_msg.odometry_offset_robot_x = msg->odometry_offset_robot_x;
+    fe2be_msg.odometry_offset_robot_y = msg->odometry_offset_robot_y;
+    fe2be_msg.odometry_offset_robot_theta = msg->odometry_offset_robot_theta;
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        fe2bs_msg.trim_kecepatan_robot[i] = msg->trim_kecepatan_robot[i];
+        fe2be_msg.trim_kecepatan_robot[i] = msg->trim_kecepatan_robot[i];
     }
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        fe2bs_msg.trim_kecepatan_sudut_robot[i] = msg->trim_kecepatan_sudut_robot[i];
+        fe2be_msg.trim_kecepatan_sudut_robot[i] = msg->trim_kecepatan_sudut_robot[i];
     }
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        fe2bs_msg.trim_penendang_robot[i] = msg->trim_penendang_robot[i];
+        fe2be_msg.trim_penendang_robot[i] = msg->trim_penendang_robot[i];
     }
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        fe2bs_msg.status_control_robot[i] = msg->status_control_robot[i];
+        fe2be_msg.status_control_robot[i] = msg->status_control_robot[i];
     }
 }
 
@@ -340,11 +340,11 @@ void setMuxNRobotControlledBS()
 {
     uint16_t mux = 0;
 
-    mux |= fe2bs_msg.status_control_robot[0] * 0b00001;
-    mux |= fe2bs_msg.status_control_robot[1] * 0b00010;
-    mux |= fe2bs_msg.status_control_robot[2] * 0b00100;
-    mux |= fe2bs_msg.status_control_robot[3] * 0b01000;
-    mux |= fe2bs_msg.status_control_robot[4] * 0b10000;
+    mux |= fe2be_msg.status_control_robot[0] * 0b00001;
+    mux |= fe2be_msg.status_control_robot[1] * 0b00010;
+    mux |= fe2be_msg.status_control_robot[2] * 0b00100;
+    mux |= fe2be_msg.status_control_robot[3] * 0b01000;
+    mux |= fe2be_msg.status_control_robot[4] * 0b10000;
 
     cllction_data.mux_bs_control_robot = mux;
 };
@@ -443,22 +443,22 @@ void setBS2PC()
     // bs2pc_msg.passing_counter;
 
     bs2pc_msg.header_manual_and_calibration = 10;
-    bs2pc_msg.command = fe2bs_msg.command;
-    bs2pc_msg.style = fe2bs_msg.style;
-    bs2pc_msg.offset_robot_x = fe2bs_msg.odometry_offset_robot_x;
-    bs2pc_msg.offset_robot_y = fe2bs_msg.odometry_offset_robot_y;
-    bs2pc_msg.offset_robot_theta = fe2bs_msg.odometry_offset_robot_theta;
+    bs2pc_msg.command = fe2be_msg.command;
+    bs2pc_msg.style = fe2be_msg.style;
+    bs2pc_msg.offset_robot_x = fe2be_msg.odometry_offset_robot_x;
+    bs2pc_msg.offset_robot_y = fe2be_msg.odometry_offset_robot_y;
+    bs2pc_msg.offset_robot_theta = fe2be_msg.odometry_offset_robot_theta;
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        bs2pc_msg.control_v_linear[i] = fe2bs_msg.trim_kecepatan_robot[i];
+        bs2pc_msg.control_v_linear[i] = fe2be_msg.trim_kecepatan_robot[i];
     }
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        bs2pc_msg.control_v_angular[i] = fe2bs_msg.trim_kecepatan_sudut_robot[i];
+        bs2pc_msg.control_v_angular[i] = fe2be_msg.trim_kecepatan_sudut_robot[i];
     }
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        bs2pc_msg.control_power_kicker[i] = fe2bs_msg.trim_penendang_robot[i];
+        bs2pc_msg.control_power_kicker[i] = fe2be_msg.trim_penendang_robot[i];
     }
 };
 
@@ -771,7 +771,6 @@ void getObsGroup()
                     if (stop > start)
                     {
                         counter = stop - start;
-                        ROS_INFO("counter: %d", counter);
                         if (counter >= counter_offset)
                         {
                             uint8_t dist_mean = 0;
@@ -893,7 +892,7 @@ uint8_t isCondition20Exist()
 uint8_t isRobotReady(uint8_t index_robot)
 {
     uint8_t is_robot_ready = 0;
-    if (entity_robot.is_active[index_robot] && fe2bs_msg.status_control_robot[index_robot])
+    if (entity_robot.is_active[index_robot] && fe2be_msg.status_control_robot[index_robot])
     {
         is_robot_ready = 1;
     }

@@ -47,7 +47,6 @@ void cllbckRcvMtcast(const ros::TimerEvent &event)
 
     if ((nrecv > 0 && nrecv < 255) && (recv_buf[3] > '0' && recv_buf[3] <= '5') && (recv_buf[0] == 'i' && recv_buf[1] == 't' && recv_buf[2] == 's'))
     {
-        ROS_INFO("AKU SEK NOMPO");
         uint8_t n_robot = recv_buf[3] - '0';
         int counter = 4;
         int data_size = 0;
