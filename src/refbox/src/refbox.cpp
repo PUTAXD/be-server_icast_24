@@ -2,10 +2,10 @@
 #include <iostream>
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
-#include <nlohmann/json.hpp>
+// #include <nlohmann/json.hpp>
 #include <refbox/Message.h>
 
-using json = nlohmann::json;
+// using json = nlohmann::json;
 
 using boost::asio::ip::tcp;
 
@@ -46,10 +46,10 @@ int main(int argc, char *argv[])
       // std::cout.write(buf.data(), len);
       std::string message(buf.data(), len);
       message = message.substr(0, message.size() - 1);
-      json ms_ref = json::parse(message);
+      // json ms_ref = json::parse(message);
 
-      msg.command = ms_ref["command"];
-      msg.target_team = ms_ref["targetTeam"];
+      // msg.command = ms_ref["command"];
+      // msg.target_team = ms_ref["targetTeam"];
       msg.status = 1;
 
       pub_msg.publish(msg);

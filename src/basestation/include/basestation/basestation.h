@@ -30,6 +30,9 @@ public:
     }
 };
 
+//-->Voronoi Diagram
+extern std::vector<seg *> output; // Array of output segments
+
 void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg);
 void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg);
 void cllbckSndBS2PC(const ros::TimerEvent &event);
@@ -45,6 +48,7 @@ void setMuxNRobotControlledBS();
 void setObs();
 void setCounterPass();
 void setBS2PC();
+void setVoronoi();
 
 void setNRobotFriend(uint8_t robot_ind);
 

@@ -75,7 +75,10 @@
     "codecvt": "cpp",
     "forward_list": "cpp",
     "future": "cpp",
-    "valarray": "cpp"
+    "valarray": "cpp",
+    "queue": "cpp",
+    "__locale": "cpp",
+    "ios": "cpp"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }

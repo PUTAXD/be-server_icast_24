@@ -1,3 +1,4 @@
+#include "voronoi/voronoi.h"
 #include "basestation/basestation.h"
 
 #define N_ROBOT 5
@@ -54,6 +55,8 @@ void cllbckUpdateData(const ros::TimerEvent &event)
     setObs();
     getObsGroup();
     setCounterPass();
+    setVoronoi();
+
 }
 
 void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg)
@@ -474,6 +477,31 @@ void setNRobotFriend(uint8_t robot_ind)
     {
         entity_robot.n_robot_teman[robot_ind] = getNRobotCloser(robot_ind);
     }
+}
+
+void setVoronoi()
+{
+    ProcessVoronoiDiagrams();
+    
+    // set cllction_data.voronoi_start_points_x size
+    cllction_data.voronoi_start_points_x.resize(output.size());
+    cllction_data.voronoi_start_points_y.resize(output.size());
+    cllction_data.voronoi_end_points_x.resize(output.size());
+    cllction_data.voronoi_end_points_y.resize(output.size());
+    if (!output.empty())
+        for (int i = 0; i < output.size(); i++)
+        {
+            point p0 = output[i]->start;
+            point p1 = output[i]->end;
+            // while non of the x0, y0, x1, y1 is NAN or inf or abs(x0-x1) > 1200 or abs(y0-y1) > 1200
+            if (p0.x == p0.x && p0.y == p0.y && p1.x == p1.x && p1.y == p1.y && p0.x != INFINITY && p0.y != INFINITY && p1.x != INFINITY && p1.y != INFINITY && abs(p0.x - p1.x) < 1200 && abs(p0.y - p1.y) < 1200)
+            {
+                cllction_data.voronoi_start_points_x[i] = (int)p0.x;
+                cllction_data.voronoi_start_points_y[i] = (int)p0.y;
+                cllction_data.voronoi_end_points_x[i] = (int)p1.x;
+                cllction_data.voronoi_end_points_y[i] = (int)p1.y;
+            }
+        }
 }
 
 /* GETTER function */
