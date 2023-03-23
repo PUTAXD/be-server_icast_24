@@ -2,6 +2,7 @@
 #include "basestation/basestation.h"
 
 #define N_ROBOT 5
+#define DEG2RAD 0.017452925
 
 ros::Subscriber pc2bs[N_ROBOT];
 ros::Subscriber fe2be_sub;
@@ -573,13 +574,106 @@ uint8_t getNRobotCloser(uint8_t robot_ind)
     return n_robot_closer + 1;
 }
 
-void getObsGroup()
+void setObsGroup()
 {
     std::vector<int16_t> obs_angle_result;
     std::vector<int16_t> obs_dist_result;
     uint8_t dist_max = 100;
     float_t angle_max = 2.5;
     uint8_t counter_offset = 2;
+
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        uint8_t len_obs;
+        len_obs = pc2bs_msg[i].obs_length;
+        std::vector<int16_t> obs_dist_dummy;
+        std::vector<uint8_t> obs_angle_dummy;
+
+        obs_dist_dummy.clear();
+        obs_angle_dummy.clear();
+
+        static uint8_t prev_obs_state;
+        static uint8_t obs_state;
+        static uint8_t obs_start_idx;
+        static uint8_t obs_end_idx;
+        static float obs_angle;
+        static float obs_x_field_buffer[144];
+        static float obs_y_field_buffer[144];
+        uint8_t obs_cnt_idx;
+        uint8_t obs_cnt;
+        uint8_t idx;
+        float obs_x_buffer;
+        float obs_y_buffer;
+        std::vector<float> obs_dist_buffer;
+        std::vector<uint8_t> obs_idx_buffer;
+
+        obs_dist_dummy = pc2bs_msg[i].obs_dist;
+        obs_angle_dummy = pc2bs_msg[i].obs_index;
+
+        prev_obs_state = 0;
+        obs_cnt_idx = 0;
+        obs_cnt = 0;
+
+        for (int16_t j = 0; j < len_obs; j++)
+        {
+            idx = j + (j < 0) * len_obs - (j >= len_obs) * len_obs;
+            obs_state = (obs_dist_dummy[idx] <= dist_max && i != len_obs && obs_dist_dummy[idx] > 0);
+
+            if (prev_obs_state == 0 && obs_state == 1)
+            {
+                obs_start_idx = idx; // get start index
+
+                // record current val
+                obs_x_field_buffer[obs_cnt_idx] = pc2bs_msg->pos_x + obs_dist_dummy[idx] * cos(idx * 2.5 * DEG2RAD);
+                obs_y_field_buffer[obs_cnt_idx] = pc2bs_msg->pos_y + obs_dist_dummy[idx] * sin(idx * 2.5 * DEG2RAD);
+
+                obs_cnt_idx++;
+            }
+            else if (prev_obs_state == 1 && obs_state == 1 && obs_cnt_idx > 0)
+            {
+                // record current val
+                obs_x_field_buffer[obs_cnt_idx] = pc2bs_msg->pos_x + obs_dist_dummy[idx] * cos(idx * 2.5 * DEG2RAD);
+                obs_y_field_buffer[obs_cnt_idx] = pc2bs_msg->pos_y + obs_dist_dummy[idx] * sin(idx * 2.5 * DEG2RAD);
+
+                obs_cnt_idx++;
+            }
+            else if (prev_obs_state == 1 && obs_state == 0 && obs_cnt_idx > 0)
+            {
+
+                obs_end_idx = idx - 1;                            // get end idx
+                obs_angle = (obs_end_idx + obs_start_idx) * 1.25; // Get angle (degrees)
+
+                // Get mean
+                for (uint8_t j = 0; j < obs_cnt_idx; j++)
+                {
+                    obs_x_buffer += (int)obs_x_field_buffer[j];
+                    obs_y_buffer += (int)obs_y_field_buffer[j];
+                }
+                obs_x_buffer /= obs_cnt_idx;
+                obs_y_buffer /= obs_cnt_idx;
+
+                // Get center of obs
+                obs_x_buffer += 25 * cos(obs_angle * DEG2RAD);
+                obs_y_buffer += 25 * sin(obs_angle * DEG2RAD);
+
+                // Save to buffer
+                obs_dist_buffer.push_back(pythagoras(pc2bs_msg->bola_x, pc2bs_msg->bola_y, obs_x_buffer, obs_y_buffer));
+                obs_idx_buffer.push_back((obs_end_idx + obs_start_idx) * 0.5);
+
+                obs_cnt_idx = 0; // Reset counter
+                obs_cnt++;       // Update total obs
+            }
+        }
+    }
+}
+
+void getObsGroup()
+{
+    std::vector<int16_t> obs_angle_result;
+    std::vector<int16_t> obs_dist_result;
+    uint8_t dist_max = 100;
+    float_t angle_max = 3;
+    uint8_t counter_offset = 3;
 
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
@@ -597,7 +691,7 @@ void getObsGroup()
 
         for (uint8_t j = 0; j < pc2bs_msg[i].obs_length; j++)
         {
-            uint16_t angle = pc2bs_msg[i].obs_index[j] * 2.5;
+            uint16_t angle = ceil(pc2bs_msg[i].obs_index[j] * 2.5);
             obs_angle_dummy[j] = angle;
         }
 
@@ -654,26 +748,28 @@ void getObsGroup()
         uint8_t start = 0;
         uint8_t stop = 0;
         uint8_t counter = 0;
+        uint8_t len_obs = pc2bs_msg[i].obs_length;
 
-        // diskontinu: arr[0] & arr[last]
         if (!obs_dist_dummy.empty() && !obs_angle_dummy.empty())
         {
-            if (abs(obs_angle_dummy[0] - obs_angle_dummy[obs_angle_dummy.size() - 1]) <= angle_max &&
-                abs(obs_dist_dummy[0] - obs_dist_dummy[obs_dist_dummy.size() - 1]) <= dist_max)
+            // diskontinu: arr[0] & arr[last]
+            int16_t dist_diff = abs(obs_dist_dummy[0] - obs_dist_dummy[obs_dist_dummy.size() - 1]);
+            int16_t angle_diff = abs(obs_angle_dummy[0] - (360 - obs_angle_dummy[obs_angle_dummy.size() - 1]));
+            angle_diff < 0 ? angle_diff * (-1) : angle_diff;
+
+            if ((dist_diff <= dist_max) && (angle_diff <= angle_max))
             {
-                ROS_INFO("DISKONTINU");
                 uint8_t counter_up = 0;
                 uint8_t counter_down = 0;
                 uint8_t counter_mean = 0;
                 uint8_t index = 0;
-                uint8_t len_obs = pc2bs_msg[i].obs_length;
 
-                // // depan
-                for (uint8_t i = 0; i < len_obs; i++)
+                // depan
+                for (uint8_t i = 0; i < len_obs - 1; i++)
                 {
                     if (
-                        abs(obs_angle_dummy[i] - obs_angle_dummy[i + 1]) > angle_max &&
-                        abs(obs_dist_dummy[i] - obs_dist_dummy[i + 1]) > dist_max)
+                        (abs(obs_dist_dummy[i] - obs_dist_dummy[i + 1]) > dist_max) ||
+                        (abs(obs_angle_dummy[i] - obs_angle_dummy[i + 1]) > angle_max))
                     {
                         counter_up++;
                         break;
@@ -681,13 +777,14 @@ void getObsGroup()
                     counter_up++;
                 }
 
-                // // belakang
+                // belakang
                 if (counter_up < len_obs - 1)
                 {
                     for (uint8_t i = len_obs - 1; i >= 1; i--)
                     {
-                        if (abs(obs_angle_dummy[i] - obs_angle_dummy[i - 1]) > angle_max &&
-                            abs(obs_dist_dummy[i] - obs_dist_dummy[i - 1]) > dist_max)
+                        if (
+                            (abs(obs_dist_dummy[i] - obs_dist_dummy[i - 1]) > dist_max) ||
+                            (abs(obs_angle_dummy[i] - obs_angle_dummy[i - 1]) > angle_max))
                         {
                             counter_down++;
                             break;
@@ -708,8 +805,9 @@ void getObsGroup()
                 }
 
                 obs_angle_result.push_back(obs_angle_dummy[index]);
-                obs_dist_result.push_back(obs_dist_dummy[index] - 20);
+                obs_dist_result.push_back(obs_dist_dummy[index] - 15);
 
+                // assign 9999
                 for (uint8_t i = 0; i <= counter_up - 1; i++)
                 {
                     obs_angle_dummy[i] = 9999;
@@ -718,8 +816,34 @@ void getObsGroup()
 
                 for (uint8_t i = len_obs - 1; i >= len_obs - counter_down; i--)
                 {
-                    obs_angle_dummy[i] = 9999;
-                    obs_dist_dummy[i] = 9999;
+                    for (uint8_t j = i; j < len_obs - 1; j++)
+                    {
+                        obs_angle_dummy[j] = obs_angle_dummy[j + 1];
+                        obs_dist_dummy[j] = obs_dist_dummy[j + 1];
+                    }
+                    obs_angle_dummy[len_obs - 1] = 9999;
+                    obs_dist_dummy[len_obs - 1] = 9999;
+                }
+            }
+
+            float temp_angle, temp_dist;
+
+            for (uint8_t i = 0; i < len_obs - 1; i++)
+            {
+                for (uint8_t j = i + 1; j < len_obs; j++)
+                {
+                    if (obs_angle_dummy[j] < obs_angle_dummy[i])
+                    {
+                        // Tukar nilai obs_angle_dummy
+                        temp_angle = obs_angle_dummy[i];
+                        obs_angle_dummy[i] = obs_angle_dummy[j];
+                        obs_angle_dummy[j] = temp_angle;
+
+                        // Tukar nilai obs_dist_dummy
+                        temp_dist = obs_dist_dummy[i];
+                        obs_dist_dummy[i] = obs_dist_dummy[j];
+                        obs_dist_dummy[j] = temp_dist;
+                    }
                 }
             }
 
@@ -728,6 +852,8 @@ void getObsGroup()
             {
                 if (obs_angle_dummy[i] != 9999 && obs_dist_dummy[i] != 9999)
                 {
+                    prev_angle = obs_angle_dummy[i - 1];
+                    prev_dist = obs_dist_dummy[i - 1];
                     angle = obs_angle_dummy[i];
                     dist = obs_dist_dummy[i];
                     obs_angle_temp.push_back(abs(angle - prev_angle));
@@ -756,6 +882,7 @@ void getObsGroup()
             for (uint8_t i = 0; i < obs_angle_temp.size(); i++)
             {
                 prev_status = status;
+
                 if (obs_angle_temp[i] <= angle_max && obs_dist_temp[i] <= dist_max)
                 {
                     obs_status.push_back(true);
@@ -773,24 +900,16 @@ void getObsGroup()
                 }
                 if (prev_status && !status)
                 {
-                    stop = i;
+                    // ex: 0 1 1 1 -> start = 1; stop = 3;
+                    stop = i + 1;
                 }
 
                 if (i == obs_angle_temp.size() - 1)
                 {
-                    bool flag = true;
-                    for (uint8_t k = 0; k < obs_status.size(); k++)
+                    if (prev_status == status)
                     {
-                        if (obs_status[k] == false)
-                        {
-                            flag = false;
-                        }
-                    }
-
-                    if (flag)
-                    {
+                        stop = i + 1;
                         status = false;
-                        stop = i;
                     }
                 }
 
@@ -801,21 +920,17 @@ void getObsGroup()
                         counter = stop - start;
                         if (counter >= counter_offset)
                         {
-                            uint8_t dist_mean = 0;
-                            uint8_t angle_mean = 0;
-                            for (uint8_t j = start; j <= stop; j++)
+                            int16_t dist_mean = 0;
+                            int16_t angle_mean = 0;
+                            for (uint8_t j = start; j < stop; j++)
                             {
-                                j =
-                                    j +
-                                    (j < 0) * obs_angle_dummy.size() -
-                                    (j >= obs_angle_dummy.size()) * obs_angle_dummy.size();
                                 dist_mean += obs_dist_dummy[j];
                                 angle_mean += obs_angle_dummy[j];
                             }
-                            dist_mean /= counter + 1;
-                            angle_mean /= counter + 1;
+                            dist_mean /= counter;
+                            angle_mean /= counter;
 
-                            obs_dist_result.push_back(dist_mean + 50);
+                            obs_dist_result.push_back(dist_mean + 5);
                             obs_angle_result.push_back(angle_mean);
                         }
                     }
@@ -831,8 +946,6 @@ void getObsGroup()
             {
                 int16_t dist = obs_dist_result[j];
                 int16_t angle = obs_angle_result[j];
-                // double dist_rad = dist * cos((angle - 90) * M_PI / 180.0);
-                // int x = round(dist_rad * 100) / 100.0;
                 int16_t x = round((dist * cos((angle - 90) * M_PI / 180.0)) * 100) / 100.0;
                 int16_t y = round((dist * sin((angle - 90) * M_PI / 180.0)) * 100) / 100.0;
                 obs_x.push_back(x);
