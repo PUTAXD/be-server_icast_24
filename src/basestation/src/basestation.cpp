@@ -57,7 +57,6 @@ void cllbckUpdateData(const ros::TimerEvent &event)
     getObsGroup();
     setCounterPass();
     setVoronoi();
-
 }
 
 void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg)
@@ -87,6 +86,15 @@ void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg)
     entity_robot.is_active[robot_ind] = true;
     std::chrono::seconds time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
     entity_robot.time_coming[robot_ind] = time_now.count();
+
+    //--->Voronoi Pose
+    voronoi_robot_pos_x[robot_ind] = msg->pos_x;
+    voronoi_robot_pos_y[robot_ind] = msg->pos_y;
+    voronoi_is_ready[robot_ind] = entity_robot.is_active[robot_ind];
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        voronoi_status_control_robot[i] = status_control_robot[i];
+    }
 }
 
 void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg)
@@ -117,6 +125,7 @@ void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg)
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
         fe2be_msg.status_control_robot[i] = msg->status_control_robot[i];
+        status_control_robot[i] = msg->status_control_robot[i];
     }
 }
 
@@ -482,27 +491,42 @@ void setNRobotFriend(uint8_t robot_ind)
 
 void setVoronoi()
 {
-    ProcessVoronoiDiagrams();
-    
-    // set cllction_data.voronoi_start_points_x size
-    cllction_data.voronoi_start_points_x.resize(output.size());
-    cllction_data.voronoi_start_points_y.resize(output.size());
-    cllction_data.voronoi_end_points_x.resize(output.size());
-    cllction_data.voronoi_end_points_y.resize(output.size());
-    if (!output.empty())
-        for (int i = 0; i < output.size(); i++)
+    try
+    {
+        ProcessVoronoiDiagrams();
+        if (!output.empty())
         {
-            point p0 = output[i]->start;
-            point p1 = output[i]->end;
-            // while non of the x0, y0, x1, y1 is NAN or inf or abs(x0-x1) > 1200 or abs(y0-y1) > 1200
-            if (p0.x == p0.x && p0.y == p0.y && p1.x == p1.x && p1.y == p1.y && p0.x != INFINITY && p0.y != INFINITY && p1.x != INFINITY && p1.y != INFINITY && abs(p0.x - p1.x) < 1200 && abs(p0.y - p1.y) < 1200)
+            cllction_data.voronoi_start_points_x.resize(output.size());
+            cllction_data.voronoi_start_points_y.resize(output.size());
+            cllction_data.voronoi_end_points_x.resize(output.size());
+            cllction_data.voronoi_end_points_y.resize(output.size());
+            for (int i = 0; i < output.size(); i++)
             {
-                cllction_data.voronoi_start_points_x[i] = (int)p0.x;
-                cllction_data.voronoi_start_points_y[i] = (int)p0.y;
-                cllction_data.voronoi_end_points_x[i] = (int)p1.x;
-                cllction_data.voronoi_end_points_y[i] = (int)p1.y;
+                point p0 = output[i]->start;
+                point p1 = output[i]->end;
+                if (p0.x == p0.x && p0.y == p0.y && p1.x == p1.x && p1.y == p1.y && p0.x != INFINITY && p0.y != INFINITY && p1.x != INFINITY && p1.y != INFINITY && abs(p0.x - p1.x) < 1200 && abs(p0.y - p1.y) < 1200)
+                {
+                    cllction_data.voronoi_start_points_x[i] = (int)p0.x;
+                    cllction_data.voronoi_start_points_y[i] = (int)p0.y;
+                    cllction_data.voronoi_end_points_x[i] = (int)p1.x;
+                    cllction_data.voronoi_end_points_y[i] = (int)p1.y;
+                }
             }
         }
+        ClearOutput();
+    }
+    catch (const std::exception &e)
+    {
+        ROS_ERROR("Voronoi Exception: %s", e.what());
+    }
+    catch (ros::Exception &e)
+    {
+        ROS_ERROR("ROS Exception In Voronoi: %s", e.what());
+    }
+    catch (...)
+    {
+        ROS_ERROR("Voronoi Exception: Unknown");
+    }
 }
 
 /* GETTER function */

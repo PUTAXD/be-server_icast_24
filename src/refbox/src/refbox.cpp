@@ -43,7 +43,6 @@ int main(int argc, char *argv[])
         throw boost::system::system_error(error); // Some other error.
       }
 
-      // std::cout.write(buf.data(), len);
       std::string message(buf.data(), len);
       message = message.substr(0, message.size() - 1);
       // json ms_ref = json::parse(message);

@@ -31,7 +31,12 @@ public:
 };
 
 //-->Voronoi Diagram
-extern std::vector<seg *> output; // Array of output segments
+extern vector<seg *> output; // Array of output segments
+extern int16_t voronoi_robot_pos_x[5];
+extern int16_t voronoi_robot_pos_y[5];
+extern uint8_t voronoi_status_control_robot[5];
+uint8_t status_control_robot[5];
+extern bool voronoi_is_ready[5];
 
 void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg);
 void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg);

@@ -1,16 +1,33 @@
+/**
+ * @author @danendra10
+ * @date 2023-03-19
+ * @brief This file contains the implementation of the Voronoi Diagrams
+ * @ref https://en.wikipedia.org/wiki/Voronoi_diagram
+ */
 #include "voronoi/voronoi.h"
 
 priority_queue<point, vector<point>, gt> points;
 priority_queue<event, vector<event *>, gt> events;
 
+uint8_t isRobotReady(uint8_t index_robot)
+{
+    uint8_t is_robot_ready = 0;
+    if (voronoi_is_ready[index_robot] && voronoi_status_control_robot[index_robot])
+    {
+        is_robot_ready = 1;
+    }
+    return is_robot_ready;
+}
+
 void ProcessVoronoiDiagrams()
 {
-    // Read points from input.
-    point p;
-    points.push(point(100, 100));
-    points.push(point(200, 200));
-    points.push(point(300, 250));
-    points.push(point(400, 450));
+    for (uint8_t i = 0; i < 5; i++)
+    {
+        if (isRobotReady(i))
+        {
+            points.push(point(voronoi_robot_pos_x[i], voronoi_robot_pos_y[i]));
+        }
+    }
 
     // Add margins to the bounding box.
     double dx = (X1 - X0 + 1) / 5.0;
@@ -21,6 +38,8 @@ void ProcessVoronoiDiagrams()
     X1 += dx;
     Y0 -= dy;
     Y1 += dy;
+    if (points.empty())
+        return;
     // Process the queues; select the top element with smaller x coordinate.
     while (!points.empty())
         if (!events.empty() && events.top()->x <= points.top().x)
@@ -30,12 +49,13 @@ void ProcessVoronoiDiagrams()
     // After all points are processed, do the remaining circle events.
     while (!events.empty())
         ProcessEvents();
-    FinishEdges(); // Clean up dangling edges.
-    // // delete all the edges
-    // for (int i = 0; i < output.size(); i++)
-    // {
-    //     delete output[i];
-    // }
+    PrintOutput();
+    FinishEdges();
+}
+
+void ClearOutput()
+{
+    output.clear();
 }
 
 void ProcessPoints()

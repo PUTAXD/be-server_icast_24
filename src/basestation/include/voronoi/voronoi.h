@@ -62,6 +62,13 @@ struct seg
 
 arc *root = 0;
 
+//---> Robot Datas
+//================
+int16_t voronoi_robot_pos_x[5];
+int16_t voronoi_robot_pos_y[5];
+uint8_t voronoi_status_control_robot[5];
+bool voronoi_is_ready[5];
+
 //---> Prototypes
 //===============
 
@@ -79,6 +86,7 @@ void FinishEdges();
 void PrintOutput();
 
 void ProcessVoronoiDiagrams();
+void ClearOutput();
 
 struct gt
 {
