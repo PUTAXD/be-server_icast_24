@@ -24,15 +24,15 @@ int main(int argc, char *argv[])
 
     openSocket();
 
-    timer_cllbck_rcv = n.createTimer(ros::Duration(0.0001), cllbckRcvMtcast);
+    timer_cllbck_rcv = n.createTimer(ros::Duration(0.001), cllbckRcvMtcast);
 
-    bs2pc_sub = n.subscribe("bs2pc", 1000, cllbckSndMtcast);
+    bs2pc_sub = n.subscribe("bs2pc", 1, cllbckSndMtcast);
 
     for (int i = 0; i < N_ROBOT; i++)
     {
         char str_topic[100];
         sprintf(str_topic, "pc2bs_r%d", i + 1);
-        pc2bs_pub[i] = n.advertise<communications::PC2BS>(str_topic, 1000);
+        pc2bs_pub[i] = n.advertise<communications::PC2BS>(str_topic, 1);
     }
 
     spinner.spin();
@@ -120,23 +120,27 @@ void cllbckRcvMtcast(const ros::TimerEvent &event)
         counter += data_size;
 
         data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.pos_x_odom, recv_buf + counter, data_size);
+        memcpy(&pc2bs_msg.goalkeeper_field_x, recv_buf + counter, data_size);
         counter += data_size;
 
         data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.pos_y_odom, recv_buf + counter, data_size);
+        memcpy(&pc2bs_msg.goalkeeper_field_y, recv_buf + counter, data_size);
         counter += data_size;
 
         data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.pos_theta_odom, recv_buf + counter, data_size);
+        memcpy(&pc2bs_msg.ball_next_x, recv_buf + counter, data_size);
         counter += data_size;
 
         data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.vx_icp, recv_buf + counter, data_size);
+        memcpy(&pc2bs_msg.ball_next_y, recv_buf + counter, data_size);
         counter += data_size;
 
         data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.vy_icp, recv_buf + counter, data_size);
+        memcpy(&pc2bs_msg.robot_next_x, recv_buf + counter, data_size);
+        counter += data_size;
+
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.robot_next_y, recv_buf + counter, data_size);
         counter += data_size;
 
         pc2bs_msg.n_robot = n_robot;

@@ -54,13 +54,17 @@ void setObs();
 void setCounterPass();
 void setBS2PC();
 void setVoronoi();
-
 void setNRobotFriend(uint8_t robot_ind);
+void setObsGroup();
+void setGoalKeeper();
+void setObsGlobal();
+
 
 uint8_t getNRobotCloser(uint8_t robot_ind);
-void getObsGroup();
 uint8_t *getRobotTarget();
 uint8_t getNRobotClosestBall();
+int16_t getAngleToPosX(uint8_t robot_ind, int angle, int dist);
+int16_t getAngleToPosY(uint8_t robot_ind, int angle, int dist);
 
 int pythagoras(int x1, int y1, int x2, int y2);
 uint8_t *isBallCatched();

@@ -18,3 +18,9 @@ int16 pos_y_odom
 int16 pos_theta_odom
 int16 vx_icp
 int16 vy_icp
+int16 ball_next_x
+int16 ball_next_y
+int16 robot_next_x
+int16 robot_next_y
+int16 goalkeeper_field_x
+int16 goalkeeper_field_y

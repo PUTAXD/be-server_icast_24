@@ -26,19 +26,19 @@ int main(int argc, char *argv[])
     ros::NodeHandle n;
     ros::MultiThreadedSpinner spinner(4);
 
-    fe2be_sub = n.subscribe("ui2server", 1000, cllbckRcvFE2BE);
+    fe2be_sub = n.subscribe("ui2server", 1, cllbckRcvFE2BE);
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
         char str_topic[100];
         sprintf(str_topic, "pc2bs_r%d", i + 1);
-        pc2bs[i] = n.subscribe(str_topic, 1000, cllbckRcvPC2BS);
+        pc2bs[i] = n.subscribe(str_topic, 1, cllbckRcvPC2BS);
     }
-    bs2pc_pub = n.advertise<communications::BS2PC>("bs2pc", 1000);
-    entity_robot_pub = n.advertise<basestation::EntityRobot>("entity_robot", 1000);
-    cllction_pub = n.advertise<basestation::Collection>("collection", 1000);
+    bs2pc_pub = n.advertise<communications::BS2PC>("bs2pc", 1);
+    entity_robot_pub = n.advertise<basestation::EntityRobot>("entity_robot", 1);
+    cllction_pub = n.advertise<basestation::Collection>("collection", 1);
 
     timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.025), cllbckSndBS2PC);
-    timer_update_data = n.createTimer(ros::Duration(0.001), cllbckUpdateData);
+    timer_update_data = n.createTimer(ros::Duration(0.05), cllbckUpdateData);
 
     spinner.spin();
     return 0;
@@ -54,9 +54,18 @@ void cllbckUpdateData(const ros::TimerEvent &event)
     setMuxNRobotCloser();
     setMuxNRobotControlledBS();
     setObs();
-    getObsGroup();
+    setObsGroup();
+    setObsGlobal();
     setCounterPass();
-    setVoronoi();
+    setBS2PC();
+    setGoalKeeper();
+    // setVoronoi();
+}
+
+void write_u16bit(uint16_t *dst, int8_t *src, uint8_t total_bit, uint8_t offset_bit)
+{
+    for (uint8_t i = 0; i < total_bit; i++)
+        *dst |= (((*src & (1 << i)) >> i) << i + offset_bit);
 }
 
 void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg)
@@ -82,6 +91,12 @@ void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg)
     pc2bs_msg[robot_ind].pos_theta_odom = msg->pos_theta_odom;
     pc2bs_msg[robot_ind].vx_icp = msg->vx_icp;
     pc2bs_msg[robot_ind].vy_icp = msg->vy_icp;
+    pc2bs_msg[robot_ind].ball_next_x = msg->ball_next_x;
+    pc2bs_msg[robot_ind].ball_next_y = msg->ball_next_y;
+    pc2bs_msg[robot_ind].robot_next_x = msg->robot_next_x;
+    pc2bs_msg[robot_ind].robot_next_y = msg->robot_next_y;
+    pc2bs_msg[robot_ind].goalkeeper_field_x = msg->goalkeeper_field_x;
+    pc2bs_msg[robot_ind].goalkeeper_field_y = msg->goalkeeper_field_y;
 
     entity_robot.is_active[robot_ind] = true;
     std::chrono::seconds time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -312,11 +327,11 @@ void setMux1()
     uint8_t CONVERSION = 6;
     uint16_t mux = 0;
 
-    mux += cllction_data.n_robot_ready;
-    mux += cllction_data.n_robot_dekat_bola * CONVERSION;
-    mux += cllction_data.n_robot_dapat_bola * CONVERSION * CONVERSION;
-    mux += cllction_data.n_robot_umpan * CONVERSION * CONVERSION * CONVERSION;
-    mux += cllction_data.n_robot_terima * CONVERSION * CONVERSION * CONVERSION * CONVERSION;
+    write_u16bit(&mux, &cllction_data.n_robot_ready, 3, 0);
+    write_u16bit(&mux, &cllction_data.n_robot_dekat_bola, 3, 3);
+    write_u16bit(&mux, &cllction_data.n_robot_dapat_bola, 3, 6);
+    write_u16bit(&mux, &cllction_data.n_robot_umpan, 3, 9);
+    write_u16bit(&mux, &cllction_data.n_robot_terima, 3, 12);
 
     cllction_data.mux1 = mux;
 };
@@ -326,11 +341,11 @@ void setMux2()
     uint8_t CONVERSION = 6;
     uint16_t mux = 0;
 
-    mux += entity_robot.role[0];
-    mux += entity_robot.role[1] * CONVERSION;
-    mux += entity_robot.role[2] * CONVERSION * CONVERSION;
-    mux += entity_robot.role[3] * CONVERSION * CONVERSION * CONVERSION;
-    mux += entity_robot.role[4] * CONVERSION * CONVERSION * CONVERSION * CONVERSION;
+    write_u16bit(&mux, &entity_robot.role[0], 3, 0);
+    write_u16bit(&mux, &entity_robot.role[1], 3, 3);
+    write_u16bit(&mux, &entity_robot.role[2], 3, 6);
+    write_u16bit(&mux, &entity_robot.role[3], 3, 9);
+    write_u16bit(&mux, &entity_robot.role[4], 3, 12);
 
     cllction_data.mux2 = mux;
 };
@@ -376,8 +391,8 @@ void setObs()
         {
             uint16_t dist = pc2bs_msg[i].obs_dist[j];
             uint16_t angle = pc2bs_msg[i].obs_index[j] * 2.5;
-            int16_t x = dist * cos(((angle - 90) * M_PI) / 180);
-            int16_t y = dist * sin(((angle - 90) * M_PI) / 180);
+            int16_t x = getAngleToPosX(i, angle, dist);
+            int16_t y = getAngleToPosY(i, angle, dist);
             obs_x[j] = x;
             obs_y[j] = y;
         }
@@ -442,24 +457,25 @@ void setCounterPass()
 
 void setBS2PC()
 {
-    /*
-        commented variable has been proceeding before
-    */
-    // bs2pc_msg.ball_x_in_field;
-    // bs2pc_msg.ball_y_in_field;
-    // bs2pc_msg.target_manual_x;
-    // bs2pc_msg.target_manual_y;
-    // bs2pc_msg.target_manual_theta;
-    // bs2pc_msg.mux1;
-    // bs2pc_msg.mux2;
-    // bs2pc_msg.mux_bs_control;
-    // bs2pc_msg.passing_counter;
+    uint8_t bs_manual = fe2be_msg.header_manual ? 1 : 0;
+    uint8_t auto_call = fe2be_msg.auto_kalibrasi ? 1 : 0;
 
-    bs2pc_msg.header_manual_and_calibration = 10;
+    bs2pc_msg.header_manual_and_calibration = bs_manual;
+    bs2pc_msg.header_manual_and_calibration |= (auto_call << 1);
+
     bs2pc_msg.command = fe2be_msg.command;
     bs2pc_msg.style = fe2be_msg.style;
+    bs2pc_msg.ball_x_in_field = cllction_data.bola_x_pada_lapangan;
+    bs2pc_msg.ball_y_in_field = cllction_data.bola_y_pada_lapangan;
+    bs2pc_msg.target_manual_x = fe2be_msg.target_manual_x;
+    bs2pc_msg.target_manual_y = fe2be_msg.target_manual_y;
+    bs2pc_msg.target_manual_theta = fe2be_msg.target_manual_theta;
     bs2pc_msg.offset_robot_x = fe2be_msg.odometry_offset_robot_x;
     bs2pc_msg.offset_robot_y = fe2be_msg.odometry_offset_robot_y;
+    bs2pc_msg.mux_bs_control = cllction_data.mux_bs_control_robot;
+    bs2pc_msg.passing_counter = cllction_data.pass_counter;
+    bs2pc_msg.mux1 = cllction_data.mux1;
+    bs2pc_msg.mux2 = cllction_data.mux2;
     bs2pc_msg.offset_robot_theta = fe2be_msg.odometry_offset_robot_theta;
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
@@ -527,6 +543,90 @@ void setVoronoi()
     {
         ROS_ERROR("Voronoi Exception: Unknown");
     }
+}
+
+void setGoalKeeper()
+{
+    int16_t pos_x[N_ROBOT];
+    int16_t pos_y[N_ROBOT];
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        pos_x[i] = pc2bs_msg[i].goalkeeper_field_x;
+        pos_y[i] = pc2bs_msg[i].goalkeeper_field_y;
+    }
+
+    int16_t goalkeeper_x = pos_x[0];
+    int16_t goalkeeper_y = pos_y[0];
+
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        if (abs(1200 - pos_y[i]) < abs(1200 - goalkeeper_y))
+        {
+            goalkeeper_y = pos_y[i];
+        }
+
+        if (abs(400 - pos_x[i]) < abs(400 - goalkeeper_x))
+        {
+            goalkeeper_x = pos_x[i];
+        }
+    }
+
+    cllction_data.goalkeeper_field_x = goalkeeper_x;
+    cllction_data.goalkeeper_field_y = goalkeeper_y;
+}
+
+void setObsGlobal()
+{
+
+    // make temporary array to store obs_global_x and obs_global_y
+
+    std::vector<int16_t> obs_region_x;
+    std::vector<int16_t> obs_region_y;
+    std::vector<int16_t> obs_global_x_temp;
+    std::vector<int16_t> obs_global_y_temp;
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        if (isRobotReady(i))
+        {
+            switch (i)
+            {
+            case 0:
+                obs_region_x = entity_robot.group_obs_x_r1;
+                obs_region_y = entity_robot.group_obs_y_r1;
+                break;
+            case 1:
+                obs_region_x = entity_robot.group_obs_x_r2;
+                obs_region_y = entity_robot.group_obs_y_r2;
+                break;
+            case 2:
+                obs_region_x = entity_robot.group_obs_x_r3;
+                obs_region_y = entity_robot.group_obs_y_r3;
+                break;
+            case 3:
+
+                obs_region_x = entity_robot.group_obs_x_r4;
+                obs_region_y = entity_robot.group_obs_y_r4;
+                break;
+            case 4:
+                obs_region_x = entity_robot.group_obs_x_r5;
+                obs_region_y = entity_robot.group_obs_y_r5;
+                break;
+            }
+
+            int len_obs = obs_region_x.size();
+
+            for (int16_t j = 0; j < len_obs; j++)
+            {
+                obs_global_x_temp.push_back(obs_region_x[j]);
+                obs_global_y_temp.push_back(obs_region_y[j]);
+            }
+        }
+    }
+    cllction_data.obs_x_global.clear();
+    cllction_data.obs_y_global.clear();
+
+    cllction_data.obs_x_global = obs_global_x_temp;
+    cllction_data.obs_y_global = obs_global_y_temp;
 }
 
 /* GETTER function */
@@ -599,99 +699,6 @@ uint8_t getNRobotCloser(uint8_t robot_ind)
 }
 
 void setObsGroup()
-{
-    std::vector<int16_t> obs_angle_result;
-    std::vector<int16_t> obs_dist_result;
-    uint8_t dist_max = 100;
-    float_t angle_max = 2.5;
-    uint8_t counter_offset = 2;
-
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        uint8_t len_obs;
-        len_obs = pc2bs_msg[i].obs_length;
-        std::vector<int16_t> obs_dist_dummy;
-        std::vector<uint8_t> obs_angle_dummy;
-
-        obs_dist_dummy.clear();
-        obs_angle_dummy.clear();
-
-        static uint8_t prev_obs_state;
-        static uint8_t obs_state;
-        static uint8_t obs_start_idx;
-        static uint8_t obs_end_idx;
-        static float obs_angle;
-        static float obs_x_field_buffer[144];
-        static float obs_y_field_buffer[144];
-        uint8_t obs_cnt_idx;
-        uint8_t obs_cnt;
-        uint8_t idx;
-        float obs_x_buffer;
-        float obs_y_buffer;
-        std::vector<float> obs_dist_buffer;
-        std::vector<uint8_t> obs_idx_buffer;
-
-        obs_dist_dummy = pc2bs_msg[i].obs_dist;
-        obs_angle_dummy = pc2bs_msg[i].obs_index;
-
-        prev_obs_state = 0;
-        obs_cnt_idx = 0;
-        obs_cnt = 0;
-
-        for (int16_t j = 0; j < len_obs; j++)
-        {
-            idx = j + (j < 0) * len_obs - (j >= len_obs) * len_obs;
-            obs_state = (obs_dist_dummy[idx] <= dist_max && i != len_obs && obs_dist_dummy[idx] > 0);
-
-            if (prev_obs_state == 0 && obs_state == 1)
-            {
-                obs_start_idx = idx; // get start index
-
-                // record current val
-                obs_x_field_buffer[obs_cnt_idx] = pc2bs_msg->pos_x + obs_dist_dummy[idx] * cos(idx * 2.5 * DEG2RAD);
-                obs_y_field_buffer[obs_cnt_idx] = pc2bs_msg->pos_y + obs_dist_dummy[idx] * sin(idx * 2.5 * DEG2RAD);
-
-                obs_cnt_idx++;
-            }
-            else if (prev_obs_state == 1 && obs_state == 1 && obs_cnt_idx > 0)
-            {
-                // record current val
-                obs_x_field_buffer[obs_cnt_idx] = pc2bs_msg->pos_x + obs_dist_dummy[idx] * cos(idx * 2.5 * DEG2RAD);
-                obs_y_field_buffer[obs_cnt_idx] = pc2bs_msg->pos_y + obs_dist_dummy[idx] * sin(idx * 2.5 * DEG2RAD);
-
-                obs_cnt_idx++;
-            }
-            else if (prev_obs_state == 1 && obs_state == 0 && obs_cnt_idx > 0)
-            {
-
-                obs_end_idx = idx - 1;                            // get end idx
-                obs_angle = (obs_end_idx + obs_start_idx) * 1.25; // Get angle (degrees)
-
-                // Get mean
-                for (uint8_t j = 0; j < obs_cnt_idx; j++)
-                {
-                    obs_x_buffer += (int)obs_x_field_buffer[j];
-                    obs_y_buffer += (int)obs_y_field_buffer[j];
-                }
-                obs_x_buffer /= obs_cnt_idx;
-                obs_y_buffer /= obs_cnt_idx;
-
-                // Get center of obs
-                obs_x_buffer += 25 * cos(obs_angle * DEG2RAD);
-                obs_y_buffer += 25 * sin(obs_angle * DEG2RAD);
-
-                // Save to buffer
-                obs_dist_buffer.push_back(pythagoras(pc2bs_msg->bola_x, pc2bs_msg->bola_y, obs_x_buffer, obs_y_buffer));
-                obs_idx_buffer.push_back((obs_end_idx + obs_start_idx) * 0.5);
-
-                obs_cnt_idx = 0; // Reset counter
-                obs_cnt++;       // Update total obs
-            }
-        }
-    }
-}
-
-void getObsGroup()
 {
     std::vector<int16_t> obs_angle_result;
     std::vector<int16_t> obs_dist_result;
@@ -970,10 +977,14 @@ void getObsGroup()
             {
                 int16_t dist = obs_dist_result[j];
                 int16_t angle = obs_angle_result[j];
-                int16_t x = round((dist * cos((angle - 90) * M_PI / 180.0)) * 100) / 100.0;
-                int16_t y = round((dist * sin((angle - 90) * M_PI / 180.0)) * 100) / 100.0;
-                obs_x.push_back(x);
-                obs_y.push_back(y);
+                // int16_t x = round((dist * cos((angle + 90) * M_PI / 180.0)) * 100) / 100.0;
+                // int16_t y = round((dist * sin((angle + 90) * M_PI / 180.0)) * 100) / 100.0;
+                // int16_t x = round(dist * cos((angle - 270)));
+                // int16_t y = round(dist * sin((angle - 20)));
+                obs_x.push_back(getAngleToPosX(i, angle, dist));
+                obs_y.push_back(getAngleToPosY(i, angle, dist));
+                // obs_x.push_back(x);
+                // obs_y.push_back(y);
             }
 
             switch (i)
@@ -1001,6 +1012,16 @@ void getObsGroup()
             }
         }
     }
+};
+
+int16_t getAngleToPosX(uint8_t robot_ind, int angle, int dist)
+{
+    return pc2bs_msg[robot_ind].pos_x + dist * cos((angle * M_PI / 180.0));
+};
+
+int16_t getAngleToPosY(uint8_t robot_ind, int angle, int dist)
+{
+    return pc2bs_msg[robot_ind].pos_y + dist * sin((angle * M_PI / 180.0));
 };
 
 /* Formula function */
@@ -1058,6 +1079,7 @@ uint8_t isRobotReady(uint8_t index_robot)
 {
     uint8_t is_robot_ready = 0;
     if (entity_robot.is_active[index_robot] && fe2be_msg.status_control_robot[index_robot])
+    // if (entity_robot.is_active[index_robot])
     {
         is_robot_ready = 1;
     }

@@ -16,3 +16,7 @@ int16[] voronoi_start_points_x
 int16[] voronoi_start_points_y
 int16[] voronoi_end_points_x
 int16[] voronoi_end_points_y
+int16 goalkeeper_field_x
+int16 goalkeeper_field_y
+int16[] obs_x_global
+int16[] obs_y_global
