@@ -30,14 +30,6 @@ public:
     }
 };
 
-//-->Voronoi Diagram
-extern vector<seg *> output; // Array of output segments
-extern int16_t voronoi_robot_pos_x[5];
-extern int16_t voronoi_robot_pos_y[5];
-extern uint8_t voronoi_status_control_robot[5];
-uint8_t status_control_robot[5];
-extern bool voronoi_is_ready[5];
-
 void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg);
 void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg);
 void cllbckSndBS2PC(const ros::TimerEvent &event);
@@ -53,12 +45,10 @@ void setMuxNRobotControlledBS();
 void setObs();
 void setCounterPass();
 void setBS2PC();
-void setVoronoi();
 void setNRobotFriend(uint8_t robot_ind);
 void setObsGroup();
 void setGoalKeeper();
 void setObsGlobal();
-
 
 uint8_t getNRobotCloser(uint8_t robot_ind);
 uint8_t *getRobotTarget();

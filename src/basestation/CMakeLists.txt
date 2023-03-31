@@ -80,17 +80,13 @@ catkin_package(
 #  CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
 )
-add_library(
-  voronoi_diagram_lib
-  src/voronoi_diagram.cpp
-)
 include_directories(
 include
   ${catkin_INCLUDE_DIRS}
 )
 
 add_executable(basestation src/basestation.cpp)
-target_link_libraries(basestation ${catkin_LIBRARIES} voronoi_diagram_lib)
+target_link_libraries(basestation ${catkin_LIBRARIES})
 
 
 
