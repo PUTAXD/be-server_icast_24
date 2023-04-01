@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     entity_robot_pub = n.advertise<basestation::EntityRobot>("entity_robot", 1);
     cllction_pub = n.advertise<basestation::Collection>("collection", 1);
 
-    timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.025), cllbckSndBS2PC);
+    timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.05), cllbckSndBS2PC);
     timer_update_data = n.createTimer(ros::Duration(0.05), cllbckUpdateData);
 
     spinner.spin();
@@ -52,12 +52,12 @@ void cllbckUpdateData(const ros::TimerEvent &event)
     setMux2();
     setMuxNRobotCloser();
     setMuxNRobotControlledBS();
-    setObs();
-    setObsGroup();
-    setObsGlobal();
+    // setObs();
+    // setObsGroup();
+    // setObsGlobal();
     setCounterPass();
+    // setGoalKeeper();
     setBS2PC();
-    setGoalKeeper();
 }
 
 void write_u16bit(uint16_t *dst, int8_t *src, uint8_t total_bit, uint8_t offset_bit)
@@ -195,8 +195,8 @@ void setSortingBallDistance()
         {
             robots[i].distance = pythagoras(pc2bs_msg[i].bola_x,
                                             pc2bs_msg[i].bola_y,
-                                            pc2bs_msg[0].pos_x,
-                                            pc2bs_msg[0].pos_y);
+                                            pc2bs_msg[i].pos_x,
+                                            pc2bs_msg[i].pos_y);
         }
     }
 
@@ -274,6 +274,9 @@ void setRole()
     // 3 assist
     // 4 defender 2
 
+    // if (fe2be_msg.command < 128)
+    //     return;
+
     if (!isCondition20Exist())
     {
         uint8_t LEN_ARR_ROBOT_DEKAT_BOLA = sizeof(cllction_data.n_array_robot_dekat_bola) /
@@ -284,6 +287,10 @@ void setRole()
         {
             if (cllction_data.n_array_robot_dekat_bola[i] != 0)
             {
+                // if (pc2bs_msg[i].status_bola == 2)
+                // {
+                //     entity_robot.role[i] = 1;
+                // }
                 int8_t INDEX_ROBOT = cllction_data.n_array_robot_dekat_bola[i];
                 switch (counter_role)
                 {
@@ -409,6 +416,9 @@ void setObs()
             entity_robot.obs_y_r5 = obs_y;
             break;
         }
+
+        obs_x.clear();
+        obs_y.clear();
     }
 };
 
@@ -512,11 +522,10 @@ void setGoalKeeper()
         if (abs(1200 - pos_y[i]) < abs(1200 - goalkeeper_y))
         {
             goalkeeper_y = pos_y[i];
-        }
-
-        if (abs(400 - pos_x[i]) < abs(400 - goalkeeper_x))
-        {
-            goalkeeper_x = pos_x[i];
+            if (abs(400 - pos_x[i]) < abs(400 - goalkeeper_x))
+            {
+                goalkeeper_x = pos_x[i];
+            }
         }
     }
 
