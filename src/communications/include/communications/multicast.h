@@ -15,6 +15,8 @@ int sd;
 
 struct sockaddr src_addr;
 socklen_t addr_len = sizeof(src_addr);
+char ip_group[] = "224.16.32.82";
+int port = 1027;
 
 void openSocket()
 {
@@ -33,24 +35,24 @@ void openSocket()
         exit(1);
     }
 
-    memset((char *)&localSock, 0, sizeof(localSock));
-    localSock.sin_family = AF_INET;
-    localSock.sin_port = htons(1027);
-    localSock.sin_addr.s_addr = inet_addr("224.16.32.80");
-
-    if (bind(sd, (struct sockaddr *)&localSock, sizeof(localSock)))
-    {
-        perror("Binding datagram socket error");
-        close(sd);
-        exit(1);
-    }
-
     /* datagrams are to be received. */
-    group.imr_multiaddr.s_addr = inet_addr("224.16.32.80");
+    group.imr_multiaddr.s_addr = inet_addr(ip_group);
     group.imr_interface.s_addr = inet_addr("0.0.0.0");
     if (setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
     {
         perror("Adding multicast group error");
+        close(sd);
+        exit(1);
+    }
+
+    memset((char *)&localSock, 0, sizeof(localSock));
+    localSock.sin_family = AF_INET;
+    localSock.sin_port = htons(port);
+    localSock.sin_addr.s_addr = inet_addr(ip_group);
+
+    if (bind(sd, (struct sockaddr *)&localSock, sizeof(localSock)))
+    {
+        perror("Binding datagram socket error");
         close(sd);
         exit(1);
     }

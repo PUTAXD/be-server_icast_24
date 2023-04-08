@@ -81,5 +81,9 @@
     "ios": "cpp",
     "*.ipp": "cpp"
   },
-  "C_Cpp.errorSquiggles": "enabled"
+  "C_Cpp.errorSquiggles": "enabled",
+  "python.analysis.extraPaths": [
+    "/home/ram/IRIS/basestation_2023/be-basestation-2023/devel/lib/python3/dist-packages",
+    "/opt/ros/noetic/lib/python3/dist-packages"
+  ]
 }

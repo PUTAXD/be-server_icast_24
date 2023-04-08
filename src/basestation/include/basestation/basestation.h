@@ -34,6 +34,7 @@ void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg);
 void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg);
 void cllbckSndBS2PC(const ros::TimerEvent &event);
 void cllbckUpdateData(const ros::TimerEvent &event);
+void cllbckRole(const ros::TimerEvent &event);
 
 void setNRobotData();
 void setBallInField();
@@ -49,6 +50,8 @@ void setNRobotFriend(uint8_t robot_ind);
 void setObsGroup();
 void setGoalKeeper();
 void setObsGlobal();
+void setMux1JS();
+void setMux2JS();
 
 uint8_t getNRobotCloser(uint8_t robot_ind);
 uint8_t *getRobotTarget();
@@ -58,6 +61,6 @@ int16_t getAngleToPosY(uint8_t robot_ind, int angle, int dist);
 
 int pythagoras(int x1, int y1, int x2, int y2);
 uint8_t *isBallCatched();
-uint8_t isCondition20Exist();
+uint8_t isConditionExist(int);
 uint8_t isRobotReady(uint8_t index_robot);
 bool isBallAppear();

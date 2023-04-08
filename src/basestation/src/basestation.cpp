@@ -12,6 +12,7 @@ ros::Publisher entity_robot_pub;
 
 ros::Timer timer_cllbck_bs2pc;
 ros::Timer timer_update_data;
+ros::Timer timer_role;
 
 communications::BS2PC bs2pc_msg;
 communications::PC2BS pc2bs_msg[N_ROBOT];
@@ -25,19 +26,20 @@ int main(int argc, char *argv[])
     ros::NodeHandle n;
     ros::MultiThreadedSpinner spinner(4);
 
-    fe2be_sub = n.subscribe("ui2server", 1, cllbckRcvFE2BE);
+    fe2be_sub = n.subscribe("ui2server", 1000, cllbckRcvFE2BE);
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
         char str_topic[100];
         sprintf(str_topic, "pc2bs_r%d", i + 1);
-        pc2bs[i] = n.subscribe(str_topic, 1, cllbckRcvPC2BS);
+        pc2bs[i] = n.subscribe(str_topic, 1000, cllbckRcvPC2BS);
     }
-    bs2pc_pub = n.advertise<communications::BS2PC>("bs2pc", 1);
-    entity_robot_pub = n.advertise<basestation::EntityRobot>("entity_robot", 1);
-    cllction_pub = n.advertise<basestation::Collection>("collection", 1);
+    bs2pc_pub = n.advertise<communications::BS2PC>("bs2pc", 1000);
+    entity_robot_pub = n.advertise<basestation::EntityRobot>("entity_robot", 1000);
+    cllction_pub = n.advertise<basestation::Collection>("collection", 1000);
 
     timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.05), cllbckSndBS2PC);
-    timer_update_data = n.createTimer(ros::Duration(0.05), cllbckUpdateData);
+    timer_update_data = n.createTimer(ros::Duration(0.005), cllbckUpdateData);
+    timer_role = n.createTimer(ros::Duration(2), cllbckRole);
 
     spinner.spin();
     return 0;
@@ -47,17 +49,24 @@ void cllbckUpdateData(const ros::TimerEvent &event)
 {
     setNRobotData();
     setBallInField();
-    setRole();
+    // setRole();
     setMux1();
     setMux2();
+    // setMux1JS();
+    // setMux2JS();
     setMuxNRobotCloser();
     setMuxNRobotControlledBS();
-    // setObs();
+    setObs();
     // setObsGroup();
     // setObsGlobal();
     setCounterPass();
-    // setGoalKeeper();
+    setGoalKeeper();
     setBS2PC();
+}
+
+void cllbckRole(const ros::TimerEvent &event)
+{
+    setRole();
 }
 
 void write_u16bit(uint16_t *dst, int8_t *src, uint8_t total_bit, uint8_t offset_bit)
@@ -133,11 +142,19 @@ void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg)
     }
 }
 
+bool isSendToPC()
+{
+    return (fe2be_msg.status_control_robot[0] || fe2be_msg.status_control_robot[1] || fe2be_msg.status_control_robot[2] || fe2be_msg.status_control_robot[3] || fe2be_msg.status_control_robot[4]);
+}
+
 void cllbckSndBS2PC(const ros::TimerEvent &event)
 {
     entity_robot_pub.publish(entity_robot);
     cllction_pub.publish(cllction_data);
-    bs2pc_pub.publish(bs2pc_msg);
+    if (isSendToPC())
+    {
+        bs2pc_pub.publish(bs2pc_msg);
+    }
 }
 
 /* Update/setter Data Global */
@@ -146,7 +163,7 @@ void setNRobotData()
 {
     std::chrono::seconds time_now =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
-    uint8_t timeout = 2;
+    uint8_t timeout = 3;
 
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
@@ -239,7 +256,7 @@ void setBallInField()
     {
         uint8_t n_robot_closest_ball = getNRobotClosestBall();
         cllction_data.n_robot_dapat_bola = 0;
-        cllction_data.n_robot_dekat_bola = n_robot_closest_ball;
+        // cllction_data.n_robot_dekat_bola = n_robot_closest_ball;
         if (n_robot_closest_ball)
         {
             cllction_data.bola_x_pada_lapangan = pc2bs_msg[n_robot_closest_ball - 1].bola_x;
@@ -252,6 +269,23 @@ void setBallInField()
         }
         cllction_data.n_robot_umpan = 0;
         cllction_data.n_robot_terima = 0;
+
+        uint8_t n_dekat_bola = 0;
+        int distance_ball = INT_MAX;
+        for (int i = 0; i < N_ROBOT; i++)
+        {
+            if (isRobotReady(i))
+            {
+                int distance = pythagoras(pc2bs_msg[i].pos_x, pc2bs_msg[i].pos_y, cllction_data.bola_x_pada_lapangan, cllction_data.bola_y_pada_lapangan);
+                if (distance < distance_ball)
+                {
+                    distance_ball = distance;
+                    n_dekat_bola = i + 1;
+                }
+            }
+        }
+
+        cllction_data.n_robot_dekat_bola = n_dekat_bola;
     }
     else
     {
@@ -274,44 +308,78 @@ void setRole()
     // 3 assist
     // 4 defender 2
 
-    // if (fe2be_msg.command < 128)
-    //     return;
-
-    if (!isCondition20Exist())
+    if (!isConditionExist(20))
     {
         uint8_t LEN_ARR_ROBOT_DEKAT_BOLA = sizeof(cllction_data.n_array_robot_dekat_bola) /
                                            sizeof(cllction_data.n_array_robot_dekat_bola[0]);
         uint8_t counter_role = 1;
 
-        for (uint8_t i = 0; i < LEN_ARR_ROBOT_DEKAT_BOLA; i++)
+        if (cllction_data.n_robot_dekat_bola != 0)
         {
-            if (cllction_data.n_array_robot_dekat_bola[i] != 0)
+
+            for (uint8_t i = 0; i < LEN_ARR_ROBOT_DEKAT_BOLA; i++)
             {
-                // if (pc2bs_msg[i].status_bola == 2)
-                // {
-                //     entity_robot.role[i] = 1;
-                // }
-                int8_t INDEX_ROBOT = cllction_data.n_array_robot_dekat_bola[i];
-                switch (counter_role)
+                if (cllction_data.n_array_robot_dekat_bola[i] != 0)
                 {
-                case 1:
-                    entity_robot.role[INDEX_ROBOT] = 1;
-                    break;
-                case 2:
-                    entity_robot.role[INDEX_ROBOT] = 3;
-                    break;
-                case 3:
-                    entity_robot.role[INDEX_ROBOT] = 2;
-                    break;
-                case 4:
-                    entity_robot.role[INDEX_ROBOT] = 4;
-                    break;
+                    int8_t INDEX_ROBOT = cllction_data.n_array_robot_dekat_bola[i];
+                    switch (counter_role)
+                    {
+                    case 1:
+                        entity_robot.role[INDEX_ROBOT] = 1;
+                        break;
+                    case 2:
+                        entity_robot.role[INDEX_ROBOT] = 3;
+                        break;
+                    case 3:
+                        entity_robot.role[INDEX_ROBOT] = 2;
+                        break;
+                    case 4:
+                        entity_robot.role[INDEX_ROBOT] = 4;
+                        break;
+                    }
+                    counter_role++;
                 }
-                counter_role++;
+                if (!isRobotReady(i))
+                {
+                    entity_robot.role[i] = 0;
+                }
             }
-            if (!isRobotReady(i))
+        }
+        else
+        {
+            for (int i = 0; i < N_ROBOT; i++)
             {
-                entity_robot.role[i] = 0;
+                if (isRobotReady(i))
+                {
+                    if (cllction_data.n_robot_ready == 1)
+                    {
+                        entity_robot.role[i] = 1;
+                    }
+                    else if (
+                        cllction_data.n_robot_dapat_bola == 0 && entity_robot.role[0] == 0 && entity_robot.role[1] == 0 && entity_robot.role[2] == 0 && entity_robot.role[3] == 0 && entity_robot.role[4] == 0)
+                    {
+                        if (isRobotReady(1))
+                        {
+                            entity_robot.role[1] = 1;
+                        }
+                        if (isRobotReady(2))
+                        {
+                            entity_robot.role[2] = 3;
+                        }
+                        if (isRobotReady(3))
+                        {
+                            entity_robot.role[3] = 2;
+                        }
+                        if (isRobotReady(4))
+                        {
+                            entity_robot.role[4] = 4;
+                        }
+                    }
+                }
+                else
+                {
+                    entity_robot.role[i] = 0;
+                }
             }
         }
         entity_robot.role[0] = 0;
@@ -332,6 +400,20 @@ void setMux1()
     cllction_data.mux1 = mux;
 };
 
+void setMux1JS()
+{
+    uint8_t CONVERSION = 6;
+    uint16_t mux = 0;
+
+    mux += cllction_data.n_robot_ready;
+    mux += cllction_data.n_robot_dekat_bola * CONVERSION;
+    mux += cllction_data.n_robot_dapat_bola * CONVERSION * CONVERSION;
+    mux += cllction_data.n_robot_umpan * CONVERSION * CONVERSION * CONVERSION;
+    mux += cllction_data.n_robot_terima * CONVERSION * CONVERSION * CONVERSION * CONVERSION;
+
+    cllction_data.mux1 = mux;
+}
+
 void setMux2()
 {
     uint8_t CONVERSION = 6;
@@ -345,6 +427,20 @@ void setMux2()
 
     cllction_data.mux2 = mux;
 };
+
+void setMux2JS()
+{
+    uint8_t CONVERSION = 6;
+    uint16_t mux = 0;
+
+    mux += entity_robot.role[0];
+    mux += entity_robot.role[1] * CONVERSION;
+    mux += entity_robot.role[2] * CONVERSION * CONVERSION;
+    mux += entity_robot.role[3] * CONVERSION * CONVERSION * CONVERSION;
+    mux += entity_robot.role[4] * CONVERSION * CONVERSION * CONVERSION * CONVERSION;
+
+    cllction_data.mux2 = mux;
+}
 
 void setMuxNRobotCloser()
 {
@@ -380,17 +476,14 @@ void setObs()
         uint8_t LEN_OBS = pc2bs_msg[i].obs_length;
         std::vector<int16_t> obs_x;
         std::vector<int16_t> obs_y;
-        obs_x.resize(LEN_OBS);
-        obs_y.resize(LEN_OBS);
 
         for (uint8_t j = 0; j < LEN_OBS; j++)
         {
             uint16_t dist = pc2bs_msg[i].obs_dist[j];
             uint16_t angle = pc2bs_msg[i].obs_index[j] * 2.5;
-            int16_t x = getAngleToPosX(i, angle, dist);
-            int16_t y = getAngleToPosY(i, angle, dist);
-            obs_x[j] = x;
-            obs_y[j] = y;
+
+            obs_x.push_back(getAngleToPosX(i, angle, dist));
+            obs_y.push_back(getAngleToPosY(i, angle, dist));
         }
 
         switch (i)
@@ -661,8 +754,9 @@ void setObsGroup()
     std::vector<int16_t> obs_angle_result;
     std::vector<int16_t> obs_dist_result;
     uint8_t dist_max = 100;
-    float_t angle_max = 3;
+    float_t angle_max = 6;
     uint8_t counter_offset = 3;
+    int dist_back = 20;
 
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
@@ -671,17 +765,16 @@ void setObsGroup()
         std::vector<int16_t> obs_dist_temp;
         std::vector<int16_t> obs_angle_temp;
 
-        obs_dist_dummy.clear();
-        obs_angle_dummy.clear();
+        // obs_dist_dummy.clear();
+        // obs_angle_dummy.clear();
 
         // assign obs_dist & obs_angle
         obs_dist_dummy = pc2bs_msg[i].obs_dist;
-        obs_angle_dummy.resize(pc2bs_msg[i].obs_length);
 
         for (uint8_t j = 0; j < pc2bs_msg[i].obs_length; j++)
         {
             uint16_t angle = ceil(pc2bs_msg[i].obs_index[j] * 2.5);
-            obs_angle_dummy[j] = angle;
+            obs_angle_dummy.push_back(angle);
         }
 
         // abs angle
@@ -794,7 +887,7 @@ void setObsGroup()
                 }
 
                 obs_angle_result.push_back(obs_angle_dummy[index]);
-                obs_dist_result.push_back(obs_dist_dummy[index] - 15);
+                obs_dist_result.push_back(obs_dist_dummy[index] - dist_back);
 
                 // assign 9999
                 for (uint8_t i = 0; i <= counter_up - 1; i++)
@@ -919,7 +1012,7 @@ void setObsGroup()
                             dist_mean /= counter;
                             angle_mean /= counter;
 
-                            obs_dist_result.push_back(dist_mean + 5);
+                            obs_dist_result.push_back(dist_mean + dist_back);
                             obs_angle_result.push_back(angle_mean);
                         }
                     }
@@ -928,21 +1021,13 @@ void setObsGroup()
 
             std::vector<int16_t> obs_x;
             std::vector<int16_t> obs_y;
-            obs_x.clear();
-            obs_y.clear();
 
             for (uint8_t j = 0; j < obs_angle_result.size(); j++)
             {
                 int16_t dist = obs_dist_result[j];
                 int16_t angle = obs_angle_result[j];
-                // int16_t x = round((dist * cos((angle + 90) * M_PI / 180.0)) * 100) / 100.0;
-                // int16_t y = round((dist * sin((angle + 90) * M_PI / 180.0)) * 100) / 100.0;
-                // int16_t x = round(dist * cos((angle - 270)));
-                // int16_t y = round(dist * sin((angle - 20)));
                 obs_x.push_back(getAngleToPosX(i, angle, dist));
                 obs_y.push_back(getAngleToPosY(i, angle, dist));
-                // obs_x.push_back(x);
-                // obs_y.push_back(y);
             }
 
             switch (i)
@@ -1020,17 +1105,17 @@ uint8_t *isBallCatched()
     return is_ball_catched;
 }
 
-uint8_t isCondition20Exist()
+uint8_t isConditionExist(int cond_number)
 {
-    uint8_t is_condition_20_exist = 0;
+    uint8_t condition = 0;
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        if (pc2bs_msg[i].robot_condition == 20)
+        if (pc2bs_msg[i].robot_condition == cond_number)
         {
-            is_condition_20_exist = 1;
+            condition = 1;
         }
     }
-    return is_condition_20_exist;
+    return condition;
 }
 
 uint8_t isRobotReady(uint8_t index_robot)

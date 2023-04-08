@@ -3,7 +3,7 @@
         <arg name="port" value="9090"/>
     </include>
 
-    <!-- <node name="basestation" pkg="basestation" type="basestation" output="screen" respawn="true"/> -->
+    <node name="basestation" pkg="basestation" type="basestation" output="screen" respawn="true"/>
     <node name="comm_multicast" pkg="communications" type="comm_multicast" output="screen" respawn="true"/>
     <!-- <node name="comm_boost" pkg="communications" type="comm_boost" output="screen" respawn="true"/> -->
 </launch>   
