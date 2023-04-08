@@ -78,7 +78,8 @@
     "valarray": "cpp",
     "queue": "cpp",
     "__locale": "cpp",
-    "ios": "cpp"
+    "ios": "cpp",
+    "*.ipp": "cpp"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }

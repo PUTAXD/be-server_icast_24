@@ -35,7 +35,7 @@ void openSocket()
 
     memset((char *)&localSock, 0, sizeof(localSock));
     localSock.sin_family = AF_INET;
-    localSock.sin_port = htons(1026);
+    localSock.sin_port = htons(1027);
     localSock.sin_addr.s_addr = inet_addr("224.16.32.80");
 
     if (bind(sd, (struct sockaddr *)&localSock, sizeof(localSock)))
