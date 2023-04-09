@@ -13,8 +13,9 @@ using boost::asio::ip::udp;
 #define N_ROBOT 5
 #define LEN_MSG 256
 
-const std::string mtcast_address = "224.16.32.80";
+const std::string mtcast_address = "224.16.32.82";
 constexpr short multicast_port = 1027;
+const int max_ttl = 2;
 
 void cllbckRcvMtcast(char *rcv_buf_);
 void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg);
@@ -36,6 +37,8 @@ public:
         // Join the multicast group.
         socket_.set_option(boost::asio::ip::multicast::join_group(
             boost::asio::ip::address::from_string(mtcast_address)));
+        socket_.set_option(boost::asio::ip::multicast::hops(max_ttl));
+        socket_.set_option(boost::asio::ip::multicast::enable_loopback(false));
 
         do_receive();
     }
@@ -69,17 +72,13 @@ public:
           socket_(io_context, endpoint_.protocol()),
           timer_(io_context)
     {
-
-        // do_send();
     }
 
     void do_send(char *msg, int len)
     {
         socket_.async_send_to(
             boost::asio::buffer(msg, len), endpoint_,
-            [this](boost::system::error_code ec, std::size_t /*length*/)
-            {
-                // do_timeout();
+            [this](boost::system::error_code ec, std::size_t /*length*/) {
             });
     }
 
@@ -88,10 +87,7 @@ private:
     {
         timer_.expires_after(std::chrono::milliseconds(25));
         timer_.async_wait(
-            [this](boost::system::error_code ec)
-            {
-                // if (!ec)
-                // do_send();
+            [this](boost::system::error_code ec) {
             });
     }
 

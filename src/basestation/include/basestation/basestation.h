@@ -52,6 +52,7 @@ void setGoalKeeper();
 void setObsGlobal();
 void setMux1JS();
 void setMux2JS();
+void setObsGroupOnly();
 
 uint8_t getNRobotCloser(uint8_t robot_ind);
 uint8_t *getRobotTarget();

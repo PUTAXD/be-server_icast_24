@@ -56,8 +56,9 @@ void cllbckUpdateData(const ros::TimerEvent &event)
     // setMux2JS();
     setMuxNRobotCloser();
     setMuxNRobotControlledBS();
-    setObs();
-    setObsGroup();
+    setObsGroupOnly();
+    // setObs();
+    // setObsGroup();
     // setObsGlobal();
     setCounterPass();
     setGoalKeeper();
@@ -468,6 +469,50 @@ void setMuxNRobotControlledBS()
 
     cllction_data.mux_bs_control_robot = mux;
 };
+
+void setObsGroupOnly()
+{
+    std::vector<int16_t> obs_x;
+    std::vector<int16_t> obs_y;
+
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        obs_x.clear();
+        obs_y.clear();
+        int len_obs = pc2bs_msg[i].obs_dist.size();
+        for (uint8_t j = 0; j < len_obs; j++)
+        {
+            int16_t dist = pc2bs_msg[i].obs_dist[j];
+            int16_t angle = pc2bs_msg[i].obs_index[j] * 2.5;
+            obs_x.push_back(getAngleToPosX(i, angle, dist));
+            obs_y.push_back(getAngleToPosY(i, angle, dist));
+        }
+
+        switch (i)
+        {
+        case 0:
+            entity_robot.group_obs_x_r1 = obs_x;
+            entity_robot.group_obs_y_r1 = obs_y;
+            break;
+        case 1:
+            entity_robot.group_obs_x_r2 = obs_x;
+            entity_robot.group_obs_y_r2 = obs_y;
+            break;
+        case 2:
+            entity_robot.group_obs_x_r3 = obs_x;
+            entity_robot.group_obs_y_r3 = obs_y;
+            break;
+        case 3:
+            entity_robot.group_obs_x_r4 = obs_x;
+            entity_robot.group_obs_y_r4 = obs_y;
+            break;
+        case 4:
+            entity_robot.group_obs_x_r5 = obs_x;
+            entity_robot.group_obs_y_r5 = obs_y;
+            break;
+        }
+    }
+}
 
 void setObs()
 {
