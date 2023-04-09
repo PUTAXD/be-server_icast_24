@@ -1,4 +1,4 @@
-#include "communications/multicast.h"
+#include "communications/multiboost.h"
 #include "communications/PC2BS.h"
 #include "communications/BS2PC.h"
 
@@ -7,11 +7,11 @@
 
 communications::PC2BS pc2bs_msg;
 
-ros::Subscriber bs2pc_sub;
 ros::Publisher pc2bs_pub[N_ROBOT];
+ros::Subscriber bs2pc_sub;
 
-void cllbckRcvMtcast(const ros::TimerEvent &event);
-void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg);
+receiver *rcvr;
+sender *sndr;
 
 int main(int argc, char *argv[])
 {
@@ -22,10 +22,6 @@ int main(int argc, char *argv[])
     ros::Timer timer_cllbck_rcv;
     ros::Timer timer_cllbck_snd;
 
-    openSocket();
-
-    timer_cllbck_rcv = n.createTimer(ros::Duration(0.001), cllbckRcvMtcast);
-
     bs2pc_sub = n.subscribe("bs2pc", 1000, cllbckSndMtcast);
 
     for (int i = 0; i < N_ROBOT; i++)
@@ -35,17 +31,23 @@ int main(int argc, char *argv[])
         pc2bs_pub[i] = n.advertise<communications::PC2BS>(str_topic, 1000);
     }
 
+    boost::asio::io_context io_context;
+    sndr = new sender(io_context, boost::asio::ip::make_address(mtcast_address));
+    rcvr = new receiver(io_context);
+    std::thread io_thread([&io_context]()
+                          { io_context.run(); });
+
     spinner.spin();
+
+    io_context.stop();
+    io_thread.join();
 
     return 0;
 }
 
-void cllbckRcvMtcast(const ros::TimerEvent &event)
+void cllbckRcvMtcast(char *recv_buf)
 {
-    char recv_buf[LEN_MSG];
-    uint8_t nrecv = recvfrom(sd, recv_buf, LEN_MSG, MSG_DONTWAIT, &src_addr, &addr_len);
-
-    if ((nrecv > 0 && nrecv < 255) && (recv_buf[3] > '0' && recv_buf[3] <= '5') && (recv_buf[0] == 'i' && recv_buf[1] == 't' && recv_buf[2] == 's'))
+    if ((recv_buf[3] > '0' && recv_buf[3] <= '5') && (recv_buf[0] == 'i' && recv_buf[1] == 't' && recv_buf[2] == 's'))
     {
         uint8_t n_robot = recv_buf[3] - '0';
         int counter = 4;
@@ -241,5 +243,5 @@ void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg)
     memcpy(send_buf + counter, &msg->passing_counter, data_size);
     counter += data_size;
 
-    uint sent = sendto(sd, send_buf, counter, 0, (struct sockaddr *)&localSock, sizeof(struct sockaddr));
+    sndr->do_send(send_buf, counter);
 }

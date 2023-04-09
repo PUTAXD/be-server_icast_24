@@ -144,8 +144,6 @@ include
 add_executable(comm_multicast src/comm_multicast.cpp)
 target_link_libraries(comm_multicast ${catkin_LIBRARIES})
 
-add_executable(comm_boost src/comm_boost.cpp)
-target_link_libraries(comm_boost ${catkin_LIBRARIES})
 # add_dependencies(node_talker src/talker.cpp)
 
 ## Rename C++ executable without prefix

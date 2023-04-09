@@ -16,10 +16,10 @@ using boost::asio::ip::udp;
 #define N_ROBOT 5
 #define LEN_MSG 256
 
-const std::string multicast_address = "224.16.32.80";
+const std::string multicast_address = "224.16.32.82";
 const unsigned short multicast_port = 1027;
 
-void cllbckRcvMtcast(char *rcv_buf_);
+void cllbckRcvMtcast(boost::array<char, 256> msg);
 void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg);
 
 communications::PC2BS pc2bs_msg;
@@ -30,9 +30,14 @@ ros::Publisher pc2bs_pub[N_ROBOT];
 boost::array<char, 256> recv_buffer_;
 std::size_t nrecv = 0;
 
+ros::Timer timer_cllbck_snd;
+
 class udp_server
 {
 public:
+    udp::socket socket_;
+    udp::endpoint remote_endpoint_;
+
     udp_server(boost::asio::io_context &io_context)
         : socket_(io_context)
     {
@@ -47,7 +52,7 @@ public:
         socket_.set_option(boost::asio::ip::multicast::join_group(
             boost::asio::ip::address::from_string(multicast_address)));
 
-        socket_.non_blocking(true);
+        // socket_.non_blocking(true);
 
         start_receive();
     }
@@ -68,7 +73,7 @@ private:
 
         if (!error)
         {
-            cllbckRcvMtcast(recv_buffer_.data());
+            cllbckRcvMtcast(recv_buffer_);
             start_receive();
         }
     }
@@ -78,10 +83,11 @@ private:
                      std::size_t /*bytes_transferred*/)
     {
     }
-    udp::socket socket_;
-    udp::endpoint remote_endpoint_;
 };
 
+void cllbckSndMtcastTimer(const ros::TimerEvent &event);
+
+udp_server *server;
 int main(int argc, char *argv[])
 {
     ros::init(argc, argv, "comm_boost");
@@ -91,11 +97,13 @@ int main(int argc, char *argv[])
     ros::Timer timer_cllbck_rcv;
 
     boost::asio::io_context io_context;
-    udp_server server(io_context);
+    server = new udp_server(io_context);
     std::thread io_thread([&io_context]()
                           { io_context.run(); });
 
-    bs2pc_sub = n.subscribe("bs2pc", 1, cllbckSndMtcast);
+    // bs2pc_sub = n.subscribe("bs2pc", 1, cllbckSndMtcast);
+    // bs2pc_sub = n.subscribe("bs2pc", 1, cllbckSndMtcast);
+    timer_cllbck_snd = n.createTimer(ros::Duration(1), cllbckSndMtcastTimer);
 
     for (int i = 0; i < N_ROBOT; i++)
     {
@@ -112,204 +120,260 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void cllbckRcvMtcast(char *recv_buf)
+void cllbckSndMtcastTimer(const ros::TimerEvent &event)
 {
+    boost::array<char, 256> send_buf;
+    send_buf.data()[0] = 'i';
+    send_buf.data()[1] = 't';
+    send_buf.data()[2] = 's';
+    send_buf.data()[3] = '3';
+    //  char send_buf[LEN_MSG];
+    // memcpy(send_buf.data(), "its0", 4);
+    // server->socket_.async_send_to(
+    //     boost::asio::buffer(send_buf, 4), server->remote_endpoint_, [send_buf](boost::system::error_code ec, std::size_t bytes_sent)
+    //     {
+    //         if (ec)
+    //         {
+    //             ROS_ERROR("Error sending data: %s", ec.message().c_str());
+    //         }
+    //         else
+    //         {
+    //             ROS_INFO("success send");
+    //         } });
 
-    if ((recv_buf[3] > '0' && recv_buf[3] <= '5') && (recv_buf[0] == 'i' && recv_buf[1] == 't' && recv_buf[2] == 's'))
+    int snt = server->socket_.send_to(boost::asio::buffer(send_buf, 4), server->remote_endpoint_);
+    ROS_INFO("snt => %d", snt);
+}
+
+void cllbckRcvMtcast(boost::array<char, 256> recv_buf)
+{
+    ROS_INFO("===============>");
+    ROS_INFO("rcv => %s", recv_buf.data());
+    ROS_INFO("=>");
+    // server->socket_.async_send_to(
+    //     boost::asio::buffer(recv_buf, 10), server->remote_endpoint_, [recv_buf](boost::system::error_code ec, std::size_t bytes_sent)
+    //     {
+    //         if (ec)
+    //         {
+    //             ROS_ERROR("Error sending data: %s", ec.message().c_str());
+    //         }
+    //         else
+    //         {
+    //             ROS_INFO("success send");
+    //         } });
+
+    if ((recv_buf.data()[3] > '0' && recv_buf.data()[3] <= '5') && (recv_buf.data()[0] == 'i' && recv_buf.data()[1] == 't' && recv_buf.data()[2] == 's'))
     {
-        uint8_t n_robot = recv_buf[3] - '0';
-        int counter = 4;
-        int data_size = 0;
-
-        data_size = sizeof(int64_t);
-        memcpy(&pc2bs_msg.epoch, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.pos_x, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.pos_y, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.theta, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(uint8_t);
-        memcpy(&pc2bs_msg.status_bola, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.bola_x, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.bola_y, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.robot_condition, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(uint8_t);
-        memcpy(&pc2bs_msg.target_umpan, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(uint8_t);
-        memcpy(&pc2bs_msg.index_point, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(uint8_t);
-        memcpy(&pc2bs_msg.obs_length, recv_buf + counter, data_size);
-        counter += data_size;
-
-        int16_t obs_dist = 0;
-        uint8_t obs_index = 0;
-        pc2bs_msg.obs_dist.clear();
-        pc2bs_msg.obs_index.clear();
-
-        uint8_t obs_length = pc2bs_msg.obs_length;
-        for (int i = 0; i < obs_length; i++)
-        {
-            data_size = sizeof(int16_t);
-            memcpy(&obs_dist, recv_buf + counter, data_size);
-            counter += data_size;
-
-            data_size = sizeof(uint8_t);
-            memcpy(&obs_index, recv_buf + counter, data_size);
-            counter += data_size;
-
-            pc2bs_msg.obs_dist.push_back(obs_dist);
-            pc2bs_msg.obs_index.push_back(obs_index);
-        }
-
-        data_size = sizeof(float_t);
-        memcpy(&pc2bs_msg.battery_health, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.goalkeeper_field_x, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.goalkeeper_field_y, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.ball_next_x, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.ball_next_y, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.robot_next_x, recv_buf + counter, data_size);
-        counter += data_size;
-
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.robot_next_y, recv_buf + counter, data_size);
-        counter += data_size;
-
-        pc2bs_msg.n_robot = n_robot;
-
-        pc2bs_pub[n_robot - 1].publish(pc2bs_msg);
+        ROS_INFO("kudune melbu kene");
     }
+    // if ((recv_buf[3] > '0' && recv_buf[3] <= '5') && (recv_buf[0] == 'i' && recv_buf[1] == 't' && recv_buf[2] == 's'))
+    // {
+    //     uint8_t n_robot = recv_buf[3] - '0';
+    //     int counter = 4;
+    //     int data_size = 0;
+
+    //     data_size = sizeof(int64_t);
+    //     memcpy(&pc2bs_msg.epoch, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.pos_x, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.pos_y, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.theta, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(uint8_t);
+    //     memcpy(&pc2bs_msg.status_bola, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.bola_x, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.bola_y, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.robot_condition, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(uint8_t);
+    //     memcpy(&pc2bs_msg.target_umpan, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(uint8_t);
+    //     memcpy(&pc2bs_msg.index_point, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(uint8_t);
+    //     memcpy(&pc2bs_msg.obs_length, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     int16_t obs_dist = 0;
+    //     uint8_t obs_index = 0;
+    //     pc2bs_msg.obs_dist.clear();
+    //     pc2bs_msg.obs_index.clear();
+
+    //     uint8_t obs_length = pc2bs_msg.obs_length;
+    //     for (int i = 0; i < obs_length; i++)
+    //     {
+    //         data_size = sizeof(int16_t);
+    //         memcpy(&obs_dist, recv_buf + counter, data_size);
+    //         counter += data_size;
+
+    //         data_size = sizeof(uint8_t);
+    //         memcpy(&obs_index, recv_buf + counter, data_size);
+    //         counter += data_size;
+
+    //         pc2bs_msg.obs_dist.push_back(obs_dist);
+    //         pc2bs_msg.obs_index.push_back(obs_index);
+    //     }
+
+    //     data_size = sizeof(float_t);
+    //     memcpy(&pc2bs_msg.battery_health, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.goalkeeper_field_x, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.goalkeeper_field_y, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.ball_next_x, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.ball_next_y, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.robot_next_x, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     data_size = sizeof(int16_t);
+    //     memcpy(&pc2bs_msg.robot_next_y, recv_buf + counter, data_size);
+    //     counter += data_size;
+
+    //     pc2bs_msg.n_robot = n_robot;
+
+    //     pc2bs_pub[n_robot - 1].publish(pc2bs_msg);
+    // }
 }
 
 void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg)
 {
-    int counter = 0;
-    int data_size = 0;
+    // int counter = 0;
+    // int data_size = 0;
 
+    // char send_buf[LEN_MSG];
+
+    // data_size = 4;
+    // memcpy(send_buf, "its0", data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int8_t);
+    // memcpy(send_buf + counter, &msg->header_manual_and_calibration, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int8_t);
+    // memcpy(send_buf + counter, &msg->command, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int8_t);
+    // memcpy(send_buf + counter, &msg->style, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->ball_x_in_field, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->ball_y_in_field, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->target_manual_x, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->target_manual_y, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->target_manual_theta, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->offset_robot_x, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->offset_robot_y, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->offset_robot_theta, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->mux1, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->mux2, data_size);
+    // counter += data_size;
+
+    // data_size = sizeof(int16_t);
+    // memcpy(send_buf + counter, &msg->mux_bs_control, data_size);
+    // counter += data_size;
+
+    // for (uint8_t i = 0; i < N_ROBOT; i++)
+    // {
+    //     data_size = sizeof(uint8_t);
+    //     memcpy(send_buf + counter, &msg->control_v_linear[i], data_size);
+    //     counter += data_size;
+    // }
+
+    // for (uint8_t i = 0; i < N_ROBOT; i++)
+    // {
+    //     data_size = sizeof(uint8_t);
+    //     memcpy(send_buf + counter, &msg->control_v_angular[i], data_size);
+    //     counter += data_size;
+    // }
+
+    // for (uint8_t i = 0; i < N_ROBOT; i++)
+    // {
+    //     data_size = sizeof(uint8_t);
+    //     memcpy(send_buf + counter, &msg->control_power_kicker[i], data_size);
+    //     counter += data_size;
+    // }
+
+    // data_size = sizeof(uint8_t);
+    // memcpy(send_buf + counter, &msg->passing_counter, data_size);
+    // counter += data_size;
+
+    // uint sent = sendto(sd, send_buf, counter, 0, (struct sockaddr *)&localSock, sizeof(struct sockaddr));
     char send_buf[LEN_MSG];
-
-    data_size = 4;
-    memcpy(send_buf, "its0", data_size);
-    counter += data_size;
-
-    data_size = sizeof(int8_t);
-    memcpy(send_buf + counter, &msg->header_manual_and_calibration, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int8_t);
-    memcpy(send_buf + counter, &msg->command, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int8_t);
-    memcpy(send_buf + counter, &msg->style, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->ball_x_in_field, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->ball_y_in_field, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->target_manual_x, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->target_manual_y, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->target_manual_theta, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->offset_robot_x, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->offset_robot_y, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->offset_robot_theta, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->mux1, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->mux2, data_size);
-    counter += data_size;
-
-    data_size = sizeof(int16_t);
-    memcpy(send_buf + counter, &msg->mux_bs_control, data_size);
-    counter += data_size;
-
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        data_size = sizeof(uint8_t);
-        memcpy(send_buf + counter, &msg->control_v_linear[i], data_size);
-        counter += data_size;
-    }
-
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        data_size = sizeof(uint8_t);
-        memcpy(send_buf + counter, &msg->control_v_angular[i], data_size);
-        counter += data_size;
-    }
-
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        data_size = sizeof(uint8_t);
-        memcpy(send_buf + counter, &msg->control_power_kicker[i], data_size);
-        counter += data_size;
-    }
-
-    data_size = sizeof(uint8_t);
-    memcpy(send_buf + counter, &msg->passing_counter, data_size);
-    counter += data_size;
-
-    uint sent = sendto(sd, send_buf, counter, 0, (struct sockaddr *)&localSock, sizeof(struct sockaddr));
+    memcpy(send_buf, "its0", 4);
+    server->socket_.async_send_to(
+        boost::asio::buffer(send_buf, 10), server->remote_endpoint_, [send_buf](boost::system::error_code ec, std::size_t bytes_sent)
+        {
+            if (ec)
+            {
+                ROS_ERROR("Error sending data: %s", ec.message().c_str());
+            }
+            else
+            {
+                ROS_INFO("success send");
+            } });
 }

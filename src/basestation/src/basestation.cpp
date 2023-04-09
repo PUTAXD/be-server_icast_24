@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     cllction_pub = n.advertise<basestation::Collection>("collection", 1000);
 
     timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.05), cllbckSndBS2PC);
-    timer_update_data = n.createTimer(ros::Duration(0.005), cllbckUpdateData);
+    timer_update_data = n.createTimer(ros::Duration(0.001), cllbckUpdateData);
     timer_role = n.createTimer(ros::Duration(2), cllbckRole);
 
     spinner.spin();
@@ -57,7 +57,7 @@ void cllbckUpdateData(const ros::TimerEvent &event)
     setMuxNRobotCloser();
     setMuxNRobotControlledBS();
     setObs();
-    // setObsGroup();
+    setObsGroup();
     // setObsGlobal();
     setCounterPass();
     setGoalKeeper();
@@ -163,7 +163,7 @@ void setNRobotData()
 {
     std::chrono::seconds time_now =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
-    uint8_t timeout = 3;
+    uint8_t timeout = 5;
 
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
@@ -477,14 +477,15 @@ void setObs()
         std::vector<int16_t> obs_x;
         std::vector<int16_t> obs_y;
 
-        for (uint8_t j = 0; j < LEN_OBS; j++)
-        {
-            uint16_t dist = pc2bs_msg[i].obs_dist[j];
-            uint16_t angle = pc2bs_msg[i].obs_index[j] * 2.5;
+        if (pc2bs_msg[i].obs_dist.size() == LEN_OBS && pc2bs_msg[i].obs_index.size() == LEN_OBS)
+            for (uint8_t j = 0; j < LEN_OBS; j++)
+            {
+                uint16_t dist = pc2bs_msg[i].obs_dist[j];
+                uint16_t angle = pc2bs_msg[i].obs_index[j] * 2.5;
 
-            obs_x.push_back(getAngleToPosX(i, angle, dist));
-            obs_y.push_back(getAngleToPosY(i, angle, dist));
-        }
+                obs_x.push_back(getAngleToPosX(i, angle, dist));
+                obs_y.push_back(getAngleToPosY(i, angle, dist));
+            }
 
         switch (i)
         {
@@ -756,7 +757,7 @@ void setObsGroup()
     uint8_t dist_max = 100;
     float_t angle_max = 6;
     uint8_t counter_offset = 3;
-    int dist_back = 20;
+    int dist_back = 25;
 
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
@@ -764,9 +765,6 @@ void setObsGroup()
         std::vector<int16_t> obs_angle_dummy;
         std::vector<int16_t> obs_dist_temp;
         std::vector<int16_t> obs_angle_temp;
-
-        // obs_dist_dummy.clear();
-        // obs_angle_dummy.clear();
 
         // assign obs_dist & obs_angle
         obs_dist_dummy = pc2bs_msg[i].obs_dist;
@@ -837,7 +835,7 @@ void setObsGroup()
             // diskontinu: arr[0] & arr[last]
             int16_t dist_diff = abs(obs_dist_dummy[0] - obs_dist_dummy[obs_dist_dummy.size() - 1]);
             int16_t angle_diff = abs(obs_angle_dummy[0] - (360 - obs_angle_dummy[obs_angle_dummy.size() - 1]));
-            angle_diff < 0 ? angle_diff * (-1) : angle_diff;
+            angle_diff = angle_diff < 0 ? angle_diff * (-1) : angle_diff;
 
             if ((dist_diff <= dist_max) && (angle_diff <= angle_max))
             {
@@ -887,7 +885,7 @@ void setObsGroup()
                 }
 
                 obs_angle_result.push_back(obs_angle_dummy[index]);
-                obs_dist_result.push_back(obs_dist_dummy[index] - dist_back);
+                obs_dist_result.push_back(obs_dist_dummy[index] + dist_back);
 
                 // assign 9999
                 for (uint8_t i = 0; i <= counter_up - 1; i++)
@@ -906,25 +904,25 @@ void setObsGroup()
                     obs_angle_dummy[len_obs - 1] = 9999;
                     obs_dist_dummy[len_obs - 1] = 9999;
                 }
-            }
 
-            float temp_angle, temp_dist;
+                float temp_angle, temp_dist;
 
-            for (uint8_t i = 0; i < len_obs - 1; i++)
-            {
-                for (uint8_t j = i + 1; j < len_obs; j++)
+                for (uint8_t i = 0; i < len_obs - 1; i++)
                 {
-                    if (obs_angle_dummy[j] < obs_angle_dummy[i])
+                    for (uint8_t j = i + 1; j < len_obs; j++)
                     {
-                        // Tukar nilai obs_angle_dummy
-                        temp_angle = obs_angle_dummy[i];
-                        obs_angle_dummy[i] = obs_angle_dummy[j];
-                        obs_angle_dummy[j] = temp_angle;
+                        if (obs_angle_dummy[j] < obs_angle_dummy[i])
+                        {
+                            // Tukar nilai obs_angle_dummy
+                            temp_angle = obs_angle_dummy[i];
+                            obs_angle_dummy[i] = obs_angle_dummy[j];
+                            obs_angle_dummy[j] = temp_angle;
 
-                        // Tukar nilai obs_dist_dummy
-                        temp_dist = obs_dist_dummy[i];
-                        obs_dist_dummy[i] = obs_dist_dummy[j];
-                        obs_dist_dummy[j] = temp_dist;
+                            // Tukar nilai obs_dist_dummy
+                            temp_dist = obs_dist_dummy[i];
+                            obs_dist_dummy[i] = obs_dist_dummy[j];
+                            obs_dist_dummy[j] = temp_dist;
+                        }
                     }
                 }
             }
@@ -1004,13 +1002,19 @@ void setObsGroup()
                         {
                             int16_t dist_mean = 0;
                             int16_t angle_mean = 0;
-                            for (uint8_t j = start; j < stop; j++)
+                            for (uint8_t j = start; j <= stop; j++)
                             {
+                                if (j == stop)
+                                {
+                                    dist_mean += obs_dist_dummy[0];
+                                    angle_mean += obs_angle_dummy[0];
+                                    continue;
+                                }
                                 dist_mean += obs_dist_dummy[j];
                                 angle_mean += obs_angle_dummy[j];
                             }
-                            dist_mean /= counter;
-                            angle_mean /= counter;
+                            dist_mean /= counter + 1;
+                            angle_mean /= counter + 1;
 
                             obs_dist_result.push_back(dist_mean + dist_back);
                             obs_angle_result.push_back(angle_mean);
