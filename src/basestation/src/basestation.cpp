@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 
     timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.05), cllbckSndBS2PC);
     timer_update_data = n.createTimer(ros::Duration(0.001), cllbckUpdateData);
-    timer_role = n.createTimer(ros::Duration(2), cllbckRole);
+    timer_role = n.createTimer(ros::Duration(0.3), cllbckRole);
 
     spinner.spin();
     return 0;
@@ -484,8 +484,14 @@ void setObsGroupOnly()
         {
             int16_t dist = pc2bs_msg[i].obs_dist[j];
             int16_t angle = pc2bs_msg[i].obs_index[j] * 2.5;
-            obs_x.push_back(getAngleToPosX(i, angle, dist));
-            obs_y.push_back(getAngleToPosY(i, angle, dist));
+
+            int obs_x_temp = getAngleToPosX(i, angle, dist);
+            int obs_y_temp = getAngleToPosY(i, angle, dist);
+            if (!(obs_x_temp == pc2bs_msg[i].pos_x && obs_y_temp == pc2bs_msg[i].pos_y))
+            {
+                obs_x.push_back(getAngleToPosX(i, angle, dist));
+                obs_y.push_back(getAngleToPosY(i, angle, dist));
+            }
         }
 
         switch (i)
