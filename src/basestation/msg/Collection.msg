@@ -14,5 +14,5 @@ uint16 mux_bs_control_robot
 int64 pass_counter
 int16 goalkeeper_field_x
 int16 goalkeeper_field_y
-int16[] obs_x_global
-int16[] obs_y_global
+int32[] obs_x_global
+int32[] obs_y_global

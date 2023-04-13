@@ -145,6 +145,14 @@ void cllbckRcvMtcast(char *recv_buf)
         memcpy(&pc2bs_msg.robot_next_y, recv_buf + counter, data_size);
         counter += data_size;
 
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.pass_target_x, recv_buf + counter, data_size);
+        counter += data_size;
+
+        data_size = sizeof(int16_t);
+        memcpy(&pc2bs_msg.pass_target_y, recv_buf + counter, data_size);
+        counter += data_size;
+
         pc2bs_msg.n_robot = n_robot;
 
         pc2bs_pub[n_robot - 1].publish(pc2bs_msg);

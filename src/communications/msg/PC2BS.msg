@@ -24,3 +24,5 @@ int16 robot_next_x
 int16 robot_next_y
 int16 goalkeeper_field_x
 int16 goalkeeper_field_y
+int16 pass_target_x
+int16 pass_target_y

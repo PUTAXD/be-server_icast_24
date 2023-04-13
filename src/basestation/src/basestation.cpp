@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     cllction_pub = n.advertise<basestation::Collection>("collection", 1000);
 
     timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.05), cllbckSndBS2PC);
-    timer_update_data = n.createTimer(ros::Duration(0.001), cllbckUpdateData);
+    timer_update_data = n.createTimer(ros::Duration(0.02), cllbckUpdateData);
     timer_role = n.createTimer(ros::Duration(0.3), cllbckRole);
 
     spinner.spin();
@@ -472,50 +472,53 @@ void setMuxNRobotControlledBS()
 
 void setObsGroupOnly()
 {
-    std::vector<int16_t> obs_x;
-    std::vector<int16_t> obs_y;
+    std::vector<int> obs_x;
+    std::vector<int> obs_y;
 
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
         obs_x.clear();
         obs_y.clear();
-        int len_obs = pc2bs_msg[i].obs_dist.size();
-        for (uint8_t j = 0; j < len_obs; j++)
+        int len_obs = pc2bs_msg[i].obs_length;
+        if (len_obs == pc2bs_msg[i].obs_index.size() && len_obs == pc2bs_msg[i].obs_dist.size())
         {
-            int16_t dist = pc2bs_msg[i].obs_dist[j];
-            int16_t angle = pc2bs_msg[i].obs_index[j] * 2.5;
-
-            int obs_x_temp = getAngleToPosX(i, angle, dist);
-            int obs_y_temp = getAngleToPosY(i, angle, dist);
-            if (!(obs_x_temp == pc2bs_msg[i].pos_x && obs_y_temp == pc2bs_msg[i].pos_y))
+            for (uint8_t j = 0; j < len_obs; j++)
             {
-                obs_x.push_back(getAngleToPosX(i, angle, dist));
-                obs_y.push_back(getAngleToPosY(i, angle, dist));
-            }
-        }
+                int dist = pc2bs_msg[i].obs_dist[j];
+                int angle = pc2bs_msg[i].obs_index[j] * 2.5;
 
-        switch (i)
-        {
-        case 0:
-            entity_robot.group_obs_x_r1 = obs_x;
-            entity_robot.group_obs_y_r1 = obs_y;
-            break;
-        case 1:
-            entity_robot.group_obs_x_r2 = obs_x;
-            entity_robot.group_obs_y_r2 = obs_y;
-            break;
-        case 2:
-            entity_robot.group_obs_x_r3 = obs_x;
-            entity_robot.group_obs_y_r3 = obs_y;
-            break;
-        case 3:
-            entity_robot.group_obs_x_r4 = obs_x;
-            entity_robot.group_obs_y_r4 = obs_y;
-            break;
-        case 4:
-            entity_robot.group_obs_x_r5 = obs_x;
-            entity_robot.group_obs_y_r5 = obs_y;
-            break;
+                int obs_x_temp = getAngleToPosX(i, angle, dist);
+                int obs_y_temp = getAngleToPosY(i, angle, dist);
+                if (!(obs_x_temp == pc2bs_msg[i].pos_x && obs_y_temp == pc2bs_msg[i].pos_y))
+                {
+                    obs_x.push_back(getAngleToPosX(i, angle, dist));
+                    obs_y.push_back(getAngleToPosY(i, angle, dist));
+                }
+            }
+
+            switch (i)
+            {
+            case 0:
+                entity_robot.group_obs_x_r1 = obs_x;
+                entity_robot.group_obs_y_r1 = obs_y;
+                break;
+            case 1:
+                entity_robot.group_obs_x_r2 = obs_x;
+                entity_robot.group_obs_y_r2 = obs_y;
+                break;
+            case 2:
+                entity_robot.group_obs_x_r3 = obs_x;
+                entity_robot.group_obs_y_r3 = obs_y;
+                break;
+            case 3:
+                entity_robot.group_obs_x_r4 = obs_x;
+                entity_robot.group_obs_y_r4 = obs_y;
+                break;
+            case 4:
+                entity_robot.group_obs_x_r5 = obs_x;
+                entity_robot.group_obs_y_r5 = obs_y;
+                break;
+            }
         }
     }
 }
@@ -683,10 +686,10 @@ void setObsGlobal()
 
     // make temporary array to store obs_global_x and obs_global_y
 
-    std::vector<int16_t> obs_region_x;
-    std::vector<int16_t> obs_region_y;
-    std::vector<int16_t> obs_global_x_temp;
-    std::vector<int16_t> obs_global_y_temp;
+    std::vector<int> obs_region_x;
+    std::vector<int> obs_region_y;
+    std::vector<int> obs_global_x_temp;
+    std::vector<int> obs_global_y_temp;
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
         if (isRobotReady(i))
@@ -1074,13 +1077,13 @@ void setObsGroup()
                 }
             }
 
-            std::vector<int16_t> obs_x;
-            std::vector<int16_t> obs_y;
+            std::vector<int> obs_x;
+            std::vector<int> obs_y;
 
             for (uint8_t j = 0; j < obs_angle_result.size(); j++)
             {
-                int16_t dist = obs_dist_result[j];
-                int16_t angle = obs_angle_result[j];
+                int dist = obs_dist_result[j];
+                int angle = obs_angle_result[j];
                 obs_x.push_back(getAngleToPosX(i, angle, dist));
                 obs_y.push_back(getAngleToPosY(i, angle, dist));
             }
