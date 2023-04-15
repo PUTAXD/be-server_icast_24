@@ -301,6 +301,24 @@ void setBallInField()
     setSortingBallDistance();
 };
 
+uint8_t *isTargetUmpanExist()
+{
+    static uint8_t is_target_umpan_exist[3] = {0, 0, 0};
+    is_target_umpan_exist[0] = 0;
+    is_target_umpan_exist[1] = 0;
+    is_target_umpan_exist[2] = 0;
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        if (pc2bs_msg[i].target_umpan != 0)
+        {
+            is_target_umpan_exist[0] = 1;
+            is_target_umpan_exist[1] = i;
+            is_target_umpan_exist[2] = pc2bs_msg[i].target_umpan;
+        }
+    }
+    return is_target_umpan_exist;
+}
+
 void setRole()
 {
     // 0 Goal Keeper
@@ -309,7 +327,23 @@ void setRole()
     // 3 assist
     // 4 defender 2
 
-    if (!isConditionExist(20))
+    /*
+        isTargetUmpanExist[0] = status
+        isTargetUmpanExist[1] = source
+        isTargetUmpanExist[2] = target
+    */
+    uint8_t *is_target_umpan_exist = isTargetUmpanExist();
+
+    if (is_target_umpan_exist[0] && !isConditionExist(20))
+    {
+        if (is_target_umpan_exist[1] != (is_target_umpan_exist[2] - 1) &&
+            pc2bs_msg[is_target_umpan_exist[1]].status_bola != 2)
+        {
+            entity_robot.role[is_target_umpan_exist[1]] = 3;
+            entity_robot.role[is_target_umpan_exist[2] - 1] = 1;
+        }
+    }
+    else if (!isConditionExist(20))
     {
         uint8_t LEN_ARR_ROBOT_DEKAT_BOLA = sizeof(cllction_data.n_array_robot_dekat_bola) /
                                            sizeof(cllction_data.n_array_robot_dekat_bola[0]);
@@ -470,15 +504,67 @@ void setMuxNRobotControlledBS()
     cllction_data.mux_bs_control_robot = mux;
 };
 
+// void setObsGroupOnly()
+// {
+//     std::vector<int> obs_x;
+//     std::vector<int> obs_y;
+
+//     for (uint8_t i = 0; i < N_ROBOT; i++)
+//     {
+//         int len_obs = pc2bs_msg[i].obs_length;
+//         if (len_obs == pc2bs_msg[i].obs_index.size() && len_obs == pc2bs_msg[i].obs_dist.size())
+//         {
+//             ROS_INFO("len obs: %d\n", len_obs);
+//             for (uint8_t j = 0; j < len_obs; j++)
+//             {
+//                 int dist = pc2bs_msg[i].obs_dist[j];
+//                 int angle = pc2bs_msg[i].obs_index[j] * 2.5;
+
+//                 int obs_x_temp = getAngleToPosX(i, angle, dist);
+//                 int obs_y_temp = getAngleToPosY(i, angle, dist);
+//                 if (!(obs_x_temp == pc2bs_msg[i].pos_x && obs_y_temp == pc2bs_msg[i].pos_y))
+//                 {
+//                     obs_x.push_back(getAngleToPosX(i, angle, dist));
+//                     obs_y.push_back(getAngleToPosY(i, angle, dist));
+//                 }
+//             }
+
+//             switch (i)
+//             {
+//             case 0:
+//                 entity_robot.group_obs_x_r1 = obs_x;
+//                 entity_robot.group_obs_y_r1 = obs_y;
+//                 break;
+//             case 1:
+//                 entity_robot.group_obs_x_r2 = obs_x;
+//                 entity_robot.group_obs_y_r2 = obs_y;
+//                 break;
+//             case 2:
+//                 entity_robot.group_obs_x_r3 = obs_x;
+//                 entity_robot.group_obs_y_r3 = obs_y;
+//                 break;
+//             case 3:
+//                 entity_robot.group_obs_x_r4 = obs_x;
+//                 entity_robot.group_obs_y_r4 = obs_y;
+//                 break;
+//             case 4:
+//                 entity_robot.group_obs_x_r5 = obs_x;
+//                 entity_robot.group_obs_y_r5 = obs_y;
+//                 break;
+//             }
+//         }
+
+//         obs_x.clear();
+//         obs_y.clear();
+//     }
+// }
+
 void setObsGroupOnly()
 {
-    std::vector<int> obs_x;
-    std::vector<int> obs_y;
-
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        obs_x.clear();
-        obs_y.clear();
+        std::vector<int> obs_x;
+        std::vector<int> obs_y;
         int len_obs = pc2bs_msg[i].obs_length;
         if (len_obs == pc2bs_msg[i].obs_index.size() && len_obs == pc2bs_msg[i].obs_dist.size())
         {
@@ -499,27 +585,44 @@ void setObsGroupOnly()
             switch (i)
             {
             case 0:
-                entity_robot.group_obs_x_r1 = obs_x;
-                entity_robot.group_obs_y_r1 = obs_y;
+                if (!obs_x.empty() && !obs_y.empty())
+                {
+                    entity_robot.group_obs_x_r1 = obs_x;
+                    entity_robot.group_obs_y_r1 = obs_y;
+                }
                 break;
             case 1:
-                entity_robot.group_obs_x_r2 = obs_x;
-                entity_robot.group_obs_y_r2 = obs_y;
+                if (!obs_x.empty() && !obs_y.empty())
+                {
+                    entity_robot.group_obs_x_r2 = obs_x;
+                    entity_robot.group_obs_y_r2 = obs_y;
+                }
                 break;
             case 2:
-                entity_robot.group_obs_x_r3 = obs_x;
-                entity_robot.group_obs_y_r3 = obs_y;
+                if (!obs_x.empty() && !obs_y.empty())
+                {
+                    entity_robot.group_obs_x_r3 = obs_x;
+                    entity_robot.group_obs_y_r3 = obs_y;
+                }
                 break;
             case 3:
-                entity_robot.group_obs_x_r4 = obs_x;
-                entity_robot.group_obs_y_r4 = obs_y;
+                if (!obs_x.empty() && !obs_y.empty())
+                {
+                    entity_robot.group_obs_x_r4 = obs_x;
+                    entity_robot.group_obs_y_r4 = obs_y;
+                }
                 break;
             case 4:
-                entity_robot.group_obs_x_r5 = obs_x;
-                entity_robot.group_obs_y_r5 = obs_y;
+                if (!obs_x.empty() && !obs_y.empty())
+                {
+                    entity_robot.group_obs_x_r5 = obs_x;
+                    entity_robot.group_obs_y_r5 = obs_y;
+                }
                 break;
             }
         }
+        obs_x.clear();
+        obs_y.clear();
     }
 }
 

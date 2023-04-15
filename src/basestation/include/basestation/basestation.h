@@ -62,6 +62,7 @@ int16_t getAngleToPosY(uint8_t robot_ind, int angle, int dist);
 
 int pythagoras(int x1, int y1, int x2, int y2);
 uint8_t *isBallCatched();
+uint8_t *isTargetUmpanExist();
 uint8_t isConditionExist(int);
 uint8_t isRobotReady(uint8_t index_robot);
 bool isBallAppear();
