@@ -53,6 +53,7 @@ add_message_files(
   FE2BE.msg
   Collection.msg
   EntityRobot.msg
+  AutoCmd.msg
 )
 
 ## Generate services in the 'srv' folder

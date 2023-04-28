@@ -22,13 +22,13 @@ int main(int argc, char *argv[])
     ros::Timer timer_cllbck_rcv;
     ros::Timer timer_cllbck_snd;
 
-    bs2pc_sub = n.subscribe("bs2pc", 1000, cllbckSndMtcast);
+    bs2pc_sub = n.subscribe("bs2pc", 1, cllbckSndMtcast);
 
     for (int i = 0; i < N_ROBOT; i++)
     {
         char str_topic[100];
         sprintf(str_topic, "pc2bs_r%d", i + 1);
-        pc2bs_pub[i] = n.advertise<communications::PC2BS>(str_topic, 1000);
+        pc2bs_pub[i] = n.advertise<communications::PC2BS>(str_topic, 1);
     }
 
     boost::asio::io_context io_context;

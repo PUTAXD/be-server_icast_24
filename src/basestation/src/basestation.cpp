@@ -5,6 +5,7 @@
 
 ros::Subscriber pc2bs[N_ROBOT];
 ros::Subscriber fe2be_sub;
+ros::Subscriber auto_cmd_sub;
 
 ros::Publisher bs2pc_pub;
 ros::Publisher cllction_pub;
@@ -19,23 +20,25 @@ communications::PC2BS pc2bs_msg[N_ROBOT];
 basestation::FE2BE fe2be_msg;
 basestation::Collection cllction_data;
 basestation::EntityRobot entity_robot;
+basestation::AutoCmd auto_cmd_msg;
 
 int main(int argc, char *argv[])
 {
     ros::init(argc, argv, "basestation");
     ros::NodeHandle n;
-    ros::MultiThreadedSpinner spinner(4);
+    ros::MultiThreadedSpinner spinner(1);
 
-    fe2be_sub = n.subscribe("ui2server", 1000, cllbckRcvFE2BE);
+    fe2be_sub = n.subscribe("ui2server", 1, cllbckRcvFE2BE);
+    auto_cmd_sub = n.subscribe("auto_cmd", 1, cllbckAutoCmd);
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
         char str_topic[100];
         sprintf(str_topic, "pc2bs_r%d", i + 1);
-        pc2bs[i] = n.subscribe(str_topic, 1000, cllbckRcvPC2BS);
+        pc2bs[i] = n.subscribe(str_topic, 1, cllbckRcvPC2BS);
     }
-    bs2pc_pub = n.advertise<communications::BS2PC>("bs2pc", 1000);
-    entity_robot_pub = n.advertise<basestation::EntityRobot>("entity_robot", 1000);
-    cllction_pub = n.advertise<basestation::Collection>("collection", 1000);
+    bs2pc_pub = n.advertise<communications::BS2PC>("bs2pc", 1);
+    entity_robot_pub = n.advertise<basestation::EntityRobot>("entity_robot", 1);
+    cllction_pub = n.advertise<basestation::Collection>("collection", 1);
 
     timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.05), cllbckSndBS2PC);
     timer_update_data = n.createTimer(ros::Duration(0.02), cllbckUpdateData);
@@ -63,6 +66,24 @@ void cllbckUpdateData(const ros::TimerEvent &event)
     setCounterPass();
     setGoalKeeper();
     setBS2PC();
+}
+
+void cllbckAutoCmd(const basestation::AutoCmd::ConstPtr &msg)
+{
+    auto_cmd_msg.name = msg->name;
+    auto_cmd_msg.ip = msg->ip;
+
+    char auto_run_str[30];
+    if (auto_cmd_msg.name.compare("run") == 0)
+    {
+        sprintf(auto_run_str, "nc -w 1 %s 65531", auto_cmd_msg.ip.c_str());
+    }
+    else if (auto_cmd_msg.name.compare("stop") == 0)
+    {
+        sprintf(auto_run_str, "nc -w 1 %s 65530", auto_cmd_msg.ip.c_str());
+    }
+
+    system(auto_run_str);
 }
 
 void cllbckRole(const ros::TimerEvent &event)
@@ -727,18 +748,9 @@ void setBS2PC()
     bs2pc_msg.mux1 = cllction_data.mux1;
     bs2pc_msg.mux2 = cllction_data.mux2;
     bs2pc_msg.offset_robot_theta = fe2be_msg.odometry_offset_robot_theta;
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        bs2pc_msg.control_v_linear[i] = fe2be_msg.trim_kecepatan_robot[i];
-    }
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        bs2pc_msg.control_v_angular[i] = fe2be_msg.trim_kecepatan_sudut_robot[i];
-    }
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        bs2pc_msg.control_power_kicker[i] = fe2be_msg.trim_penendang_robot[i];
-    }
+    bs2pc_msg.control_v_linear = fe2be_msg.trim_kecepatan_robot;
+    bs2pc_msg.control_v_angular = fe2be_msg.trim_kecepatan_sudut_robot;
+    bs2pc_msg.control_power_kicker = fe2be_msg.trim_penendang_robot;
 };
 
 /* Process Data which need sub function */

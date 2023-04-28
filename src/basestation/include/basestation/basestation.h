@@ -6,6 +6,7 @@
 #include "basestation/FE2BE.h"
 #include "basestation/Collection.h"
 #include "basestation/EntityRobot.h"
+#include "basestation/AutoCmd.h"
 #include <math.h>
 
 class CounterPass
@@ -35,6 +36,7 @@ void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg);
 void cllbckSndBS2PC(const ros::TimerEvent &event);
 void cllbckUpdateData(const ros::TimerEvent &event);
 void cllbckRole(const ros::TimerEvent &event);
+void cllbckAutoCmd(const basestation::AutoCmd::ConstPtr &msg);
 
 void setNRobotData();
 void setBallInField();
