@@ -251,5 +251,12 @@ void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg)
     memcpy(send_buf + counter, &msg->passing_counter, data_size);
     counter += data_size;
 
+    for (uint8_t i = 0; i < 4; i++)
+    {
+        data_size = sizeof(int16_t);
+        memcpy(send_buf + counter, &msg->pos_obs[i], data_size);
+        counter += data_size;
+    }
+
     sndr->do_send(send_buf, counter);
 }

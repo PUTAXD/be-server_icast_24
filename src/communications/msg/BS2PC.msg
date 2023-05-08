@@ -16,4 +16,5 @@ uint8[5] control_v_linear
 uint8[5] control_v_angular
 uint8[5] control_power_kicker
 uint8 passing_counter
+int16[4] pos_obs
 

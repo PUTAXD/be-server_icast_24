@@ -15,7 +15,7 @@ using boost::asio::ip::udp;
 
 const std::string mtcast_address = "224.16.32.82";
 constexpr short multicast_port = 1027;
-const int max_ttl = 2;
+const int max_ttl = 1;
 
 void cllbckRcvMtcast(char *rcv_buf_);
 void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg);

@@ -162,6 +162,10 @@ void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg)
         fe2be_msg.status_control_robot[i] = msg->status_control_robot[i];
         fe2be_msg.status_control_robot[i] = msg->status_control_robot[i];
     }
+    for (uint8_t i = 0; i < 4; i++)
+    {
+        fe2be_msg.pos_obs[i] = msg->pos_obs[i];
+    }
 }
 
 bool isSendToPC()
@@ -353,93 +357,98 @@ void setRole()
         isTargetUmpanExist[1] = source
         isTargetUmpanExist[2] = target
     */
-    uint8_t *is_target_umpan_exist = isTargetUmpanExist();
+    // uint8_t *is_target_umpan_exist = isTargetUmpanExist();
 
-    if (is_target_umpan_exist[0] && !isConditionExist(20))
-    {
-        if (is_target_umpan_exist[1] != (is_target_umpan_exist[2] - 1) &&
-            pc2bs_msg[is_target_umpan_exist[1]].status_bola != 2)
-        {
-            entity_robot.role[is_target_umpan_exist[1]] = 3;
-            entity_robot.role[is_target_umpan_exist[2] - 1] = 1;
-        }
-    }
-    else if (!isConditionExist(20))
-    {
-        uint8_t LEN_ARR_ROBOT_DEKAT_BOLA = sizeof(cllction_data.n_array_robot_dekat_bola) /
-                                           sizeof(cllction_data.n_array_robot_dekat_bola[0]);
-        uint8_t counter_role = 1;
+    // if (is_target_umpan_exist[0] && !isConditionExist(20))
+    // {
+    //     if (is_target_umpan_exist[1] != (is_target_umpan_exist[2] - 1) &&
+    //         pc2bs_msg[is_target_umpan_exist[1]].status_bola != 2)
+    //     {
+    //         entity_robot.role[is_target_umpan_exist[1]] = 3;
+    //         entity_robot.role[is_target_umpan_exist[2] - 1] = 1;
+    //     }
+    // }
+    // else if (!isConditionExist(20))
+    // {
+    //     uint8_t LEN_ARR_ROBOT_DEKAT_BOLA = sizeof(cllction_data.n_array_robot_dekat_bola) /
+    //                                        sizeof(cllction_data.n_array_robot_dekat_bola[0]);
+    //     uint8_t counter_role = 1;
 
-        if (cllction_data.n_robot_dekat_bola != 0)
-        {
+    //     if (cllction_data.n_robot_dekat_bola != 0)
+    //     {
 
-            for (uint8_t i = 0; i < LEN_ARR_ROBOT_DEKAT_BOLA; i++)
-            {
-                if (cllction_data.n_array_robot_dekat_bola[i] != 0)
-                {
-                    int8_t INDEX_ROBOT = cllction_data.n_array_robot_dekat_bola[i];
-                    switch (counter_role)
-                    {
-                    case 1:
-                        entity_robot.role[INDEX_ROBOT] = 1;
-                        break;
-                    case 2:
-                        entity_robot.role[INDEX_ROBOT] = 3;
-                        break;
-                    case 3:
-                        entity_robot.role[INDEX_ROBOT] = 2;
-                        break;
-                    case 4:
-                        entity_robot.role[INDEX_ROBOT] = 4;
-                        break;
-                    }
-                    counter_role++;
-                }
-                if (!isRobotReady(i))
-                {
-                    entity_robot.role[i] = 0;
-                }
-            }
-        }
-        else
-        {
-            for (int i = 0; i < N_ROBOT; i++)
-            {
-                if (isRobotReady(i))
-                {
-                    if (cllction_data.n_robot_ready == 1)
-                    {
-                        entity_robot.role[i] = 1;
-                    }
-                    else if (
-                        cllction_data.n_robot_dapat_bola == 0 && entity_robot.role[0] == 0 && entity_robot.role[1] == 0 && entity_robot.role[2] == 0 && entity_robot.role[3] == 0 && entity_robot.role[4] == 0)
-                    {
-                        if (isRobotReady(1))
-                        {
-                            entity_robot.role[1] = 1;
-                        }
-                        if (isRobotReady(2))
-                        {
-                            entity_robot.role[2] = 3;
-                        }
-                        if (isRobotReady(3))
-                        {
-                            entity_robot.role[3] = 2;
-                        }
-                        if (isRobotReady(4))
-                        {
-                            entity_robot.role[4] = 4;
-                        }
-                    }
-                }
-                else
-                {
-                    entity_robot.role[i] = 0;
-                }
-            }
-        }
-        entity_robot.role[0] = 0;
-    }
+    //         for (uint8_t i = 0; i < LEN_ARR_ROBOT_DEKAT_BOLA; i++)
+    //         {
+    //             if (cllction_data.n_array_robot_dekat_bola[i] != 0)
+    //             {
+    //                 int8_t INDEX_ROBOT = cllction_data.n_array_robot_dekat_bola[i];
+    //                 switch (counter_role)
+    //                 {
+    //                 case 1:
+    //                     entity_robot.role[INDEX_ROBOT] = 1;
+    //                     break;
+    //                 case 2:
+    //                     entity_robot.role[INDEX_ROBOT] = 3;
+    //                     break;
+    //                 case 3:
+    //                     entity_robot.role[INDEX_ROBOT] = 2;
+    //                     break;
+    //                 case 4:
+    //                     entity_robot.role[INDEX_ROBOT] = 4;
+    //                     break;
+    //                 }
+    //                 counter_role++;
+    //             }
+    //             if (!isRobotReady(i))
+    //             {
+    //                 entity_robot.role[i] = 0;
+    //             }
+    //         }
+    //     }
+    //     else
+    //     {
+    //         for (int i = 0; i < N_ROBOT; i++)
+    //         {
+    //             if (isRobotReady(i))
+    //             {
+    //                 if (cllction_data.n_robot_ready == 1)
+    //                 {
+    //                     entity_robot.role[i] = 1;
+    //                 }
+    //                 else if (
+    //                     cllction_data.n_robot_dapat_bola == 0 && entity_robot.role[0] == 0 && entity_robot.role[1] == 0 && entity_robot.role[2] == 0 && entity_robot.role[3] == 0 && entity_robot.role[4] == 0)
+    //                 {
+    //                     if (isRobotReady(1))
+    //                     {
+    //                         entity_robot.role[1] = 1;
+    //                     }
+    //                     if (isRobotReady(2))
+    //                     {
+    //                         entity_robot.role[2] = 3;
+    //                     }
+    //                     if (isRobotReady(3))
+    //                     {
+    //                         entity_robot.role[3] = 2;
+    //                     }
+    //                     if (isRobotReady(4))
+    //                     {
+    //                         entity_robot.role[4] = 4;
+    //                     }
+    //                 }
+    //             }
+    //             else
+    //             {
+    //                 entity_robot.role[i] = 0;
+    //             }
+    //         }
+    //     }
+    //     entity_robot.role[0] = 0;
+    // }
+    entity_robot.role[0] = 0;
+    entity_robot.role[1] = 3;
+    entity_robot.role[2] = 1;
+    entity_robot.role[3] = 2;
+    entity_robot.role[4] = 4;
 };
 
 void setMux1()
@@ -748,9 +757,22 @@ void setBS2PC()
     bs2pc_msg.mux1 = cllction_data.mux1;
     bs2pc_msg.mux2 = cllction_data.mux2;
     bs2pc_msg.offset_robot_theta = fe2be_msg.odometry_offset_robot_theta;
-    bs2pc_msg.control_v_linear = fe2be_msg.trim_kecepatan_robot;
-    bs2pc_msg.control_v_angular = fe2be_msg.trim_kecepatan_sudut_robot;
-    bs2pc_msg.control_power_kicker = fe2be_msg.trim_penendang_robot;
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.control_v_linear[i] = fe2be_msg.trim_kecepatan_robot[i];
+    }
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.control_v_angular[i] = fe2be_msg.trim_kecepatan_sudut_robot[i];
+    }
+    for (uint8_t i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.control_power_kicker[i] = fe2be_msg.trim_penendang_robot[i];
+    }
+    for (uint8_t i = 0; i < 4; i++)
+    {
+        bs2pc_msg.pos_obs[i] = fe2be_msg.pos_obs[i];
+    }
 };
 
 /* Process Data which need sub function */
