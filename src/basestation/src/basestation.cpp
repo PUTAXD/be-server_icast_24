@@ -40,9 +40,15 @@ int main(int argc, char *argv[])
     entity_robot_pub = n.advertise<basestation::EntityRobot>("entity_robot", 1);
     cllction_pub = n.advertise<basestation::Collection>("collection", 1);
 
+    entity_robot.role[0] = 0; // default: kiper
+    entity_robot.role[1] = 1; // default: att
+    entity_robot.role[2] = 3; // default: defen
+    entity_robot.role[3] = 2;
+    entity_robot.role[4] = 4;
+
     timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.05), cllbckSndBS2PC);
     timer_update_data = n.createTimer(ros::Duration(0.02), cllbckUpdateData);
-    timer_role = n.createTimer(ros::Duration(0.3), cllbckRole);
+    // timer_role = n.createTimer(ros::Duration(0.3), cllbckRole);
 
     spinner.spin();
     return 0;
@@ -52,7 +58,7 @@ void cllbckUpdateData(const ros::TimerEvent &event)
 {
     setNRobotData();
     setBallInField();
-    // setRole();
+    setRole();
     setMux1();
     setMux2();
     // setMux1JS();
@@ -120,12 +126,15 @@ void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg)
     pc2bs_msg[robot_ind].pos_theta_odom = msg->pos_theta_odom;
     pc2bs_msg[robot_ind].vx_icp = msg->vx_icp;
     pc2bs_msg[robot_ind].vy_icp = msg->vy_icp;
-    pc2bs_msg[robot_ind].ball_next_x = msg->ball_next_x;
-    pc2bs_msg[robot_ind].ball_next_y = msg->ball_next_y;
-    pc2bs_msg[robot_ind].robot_next_x = msg->robot_next_x;
-    pc2bs_msg[robot_ind].robot_next_y = msg->robot_next_y;
+    pc2bs_msg[robot_ind].bola_x_next = msg->bola_x_next;
+    pc2bs_msg[robot_ind].bola_y_next = msg->bola_y_next;
+    pc2bs_msg[robot_ind].pos_x_next = msg->pos_x_next;
+    pc2bs_msg[robot_ind].pos_y_next = msg->pos_y_next;
     pc2bs_msg[robot_ind].goalkeeper_field_x = msg->goalkeeper_field_x;
     pc2bs_msg[robot_ind].goalkeeper_field_y = msg->goalkeeper_field_y;
+    pc2bs_msg[robot_ind].pos_obs_length = msg->pos_obs_length;
+    pc2bs_msg[robot_ind].pos_obs_x = msg->pos_obs_x;
+    pc2bs_msg[robot_ind].pos_obs_y = msg->pos_obs_y;
 
     entity_robot.is_active[robot_ind] = true;
     std::chrono::seconds time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -134,38 +143,7 @@ void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg)
 
 void cllbckRcvFE2BE(const basestation::FE2BE::ConstPtr &msg)
 {
-    fe2be_msg.header_manual = msg->header_manual;
-    fe2be_msg.command = msg->command;
-    fe2be_msg.style = msg->style;
-    fe2be_msg.connect_refbox = msg->connect_refbox;
-    fe2be_msg.n_robot_manual = msg->n_robot_manual;
-    fe2be_msg.target_manual_x = msg->target_manual_x;
-    fe2be_msg.target_manual_y = msg->target_manual_y;
-    fe2be_msg.target_manual_theta = msg->target_manual_theta;
-    fe2be_msg.odometry_offset_robot_x = msg->odometry_offset_robot_x;
-    fe2be_msg.odometry_offset_robot_y = msg->odometry_offset_robot_y;
-    fe2be_msg.odometry_offset_robot_theta = msg->odometry_offset_robot_theta;
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        fe2be_msg.trim_kecepatan_robot[i] = msg->trim_kecepatan_robot[i];
-    }
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        fe2be_msg.trim_kecepatan_sudut_robot[i] = msg->trim_kecepatan_sudut_robot[i];
-    }
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        fe2be_msg.trim_penendang_robot[i] = msg->trim_penendang_robot[i];
-    }
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        fe2be_msg.status_control_robot[i] = msg->status_control_robot[i];
-        fe2be_msg.status_control_robot[i] = msg->status_control_robot[i];
-    }
-    for (uint8_t i = 0; i < 4; i++)
-    {
-        fe2be_msg.pos_obs[i] = msg->pos_obs[i];
-    }
+    fe2be_msg = *msg;
 }
 
 bool isSendToPC()
@@ -177,10 +155,10 @@ void cllbckSndBS2PC(const ros::TimerEvent &event)
 {
     entity_robot_pub.publish(entity_robot);
     cllction_pub.publish(cllction_data);
-    if (isSendToPC())
-    {
-        bs2pc_pub.publish(bs2pc_msg);
-    }
+    // if (isSendToPC())
+    // {
+    bs2pc_pub.publish(bs2pc_msg);
+    // }
 }
 
 /* Update/setter Data Global */
@@ -189,7 +167,7 @@ void setNRobotData()
 {
     std::chrono::seconds time_now =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
-    uint8_t timeout = 5;
+    uint8_t timeout = 1;
 
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
@@ -282,7 +260,7 @@ void setBallInField()
     {
         uint8_t n_robot_closest_ball = getNRobotClosestBall();
         cllction_data.n_robot_dapat_bola = 0;
-        // cllction_data.n_robot_dekat_bola = n_robot_closest_ball;
+        cllction_data.n_robot_dekat_bola = n_robot_closest_ball;
         if (n_robot_closest_ball)
         {
             cllction_data.bola_x_pada_lapangan = pc2bs_msg[n_robot_closest_ball - 1].bola_x;
@@ -296,22 +274,25 @@ void setBallInField()
         cllction_data.n_robot_umpan = 0;
         cllction_data.n_robot_terima = 0;
 
-        uint8_t n_dekat_bola = 0;
-        int distance_ball = INT_MAX;
-        for (int i = 0; i < N_ROBOT; i++)
-        {
-            if (isRobotReady(i))
-            {
-                int distance = pythagoras(pc2bs_msg[i].pos_x, pc2bs_msg[i].pos_y, cllction_data.bola_x_pada_lapangan, cllction_data.bola_y_pada_lapangan);
-                if (distance < distance_ball)
-                {
-                    distance_ball = distance;
-                    n_dekat_bola = i + 1;
-                }
-            }
-        }
+        // uint8_t n_dekat_bola = 0;
+        // int distance_ball = INT_MAX;
+        // for (int i = 0; i < N_ROBOT; i++)
+        // {
+        //     if (isRobotReady(i))
+        //     {
+        //         int distance = pythagoras(pc2bs_msg[i].pos_x, pc2bs_msg[i].pos_y, cllction_data.bola_x_pada_lapangan, cllction_data.bola_y_pada_lapangan);
+        //         if (distance < distance_ball)
+        //         {
+        //             distance_ball = distance;
+        //             n_dekat_bola = i + 1;
+        //         }
+        //     }
+        // }
 
-        cllction_data.n_robot_dekat_bola = n_dekat_bola;
+        // cllction_data.n_robot_dekat_bola = n_dekat_bola;
+
+        // cllction_data.bola_x_pada_lapangan = pc2bs_msg[n_dekat_bola - 1].bola_x;
+        // cllction_data.bola_y_pada_lapangan = pc2bs_msg[n_dekat_bola - 1].bola_y;
     }
     else
     {
@@ -321,6 +302,12 @@ void setBallInField()
         cllction_data.bola_y_pada_lapangan = 0;
         cllction_data.n_robot_umpan = 0;
         cllction_data.n_robot_terima = 0;
+    }
+
+    // asdasdasdasd
+    if (cllction_data.bola_x_pada_lapangan == 0 && cllction_data.bola_y_pada_lapangan == 0)
+    {
+        cllction_data.n_robot_dekat_bola = 0;
     }
 
     setSortingBallDistance();
@@ -343,6 +330,9 @@ uint8_t *isTargetUmpanExist()
     }
     return is_target_umpan_exist;
 }
+
+int16_t pos_x = 0;
+int16_t pos_y = 0;
 
 void setRole()
 {
@@ -368,7 +358,8 @@ void setRole()
     //         entity_robot.role[is_target_umpan_exist[2] - 1] = 1;
     //     }
     // }
-    // else if (!isConditionExist(20))
+    // else
+    // if (!isConditionExist(20))
     // {
     //     uint8_t LEN_ARR_ROBOT_DEKAT_BOLA = sizeof(cllction_data.n_array_robot_dekat_bola) /
     //                                        sizeof(cllction_data.n_array_robot_dekat_bola[0]);
@@ -376,7 +367,6 @@ void setRole()
 
     //     if (cllction_data.n_robot_dekat_bola != 0)
     //     {
-
     //         for (uint8_t i = 0; i < LEN_ARR_ROBOT_DEKAT_BOLA; i++)
     //         {
     //             if (cllction_data.n_array_robot_dekat_bola[i] != 0)
@@ -444,11 +434,80 @@ void setRole()
     //     }
     //     entity_robot.role[0] = 0;
     // }
-    entity_robot.role[0] = 0;
-    entity_robot.role[1] = 3;
-    entity_robot.role[2] = 1;
-    entity_robot.role[3] = 2;
-    entity_robot.role[4] = 4;
+
+    if (fe2be_msg.style == 67 || fe2be_msg.style == 68)
+    {
+        if (isRobotReady(2))
+        {
+            entity_robot.role[1] = 3;
+            entity_robot.role[2] = 1;
+        }
+        if (isRobotReady(1))
+        {
+            entity_robot.role[1] = 1;
+            entity_robot.role[2] = 3;
+        }
+    }
+    else
+    {
+        if (cllction_data.n_robot_ready == 1)
+        {
+            if (isRobotReady(2))
+            {
+                entity_robot.role[1] = 3;
+                entity_robot.role[2] = 1;
+            }
+            if (isRobotReady(1))
+            {
+                entity_robot.role[1] = 1;
+                entity_robot.role[2] = 3;
+            }
+        }
+        else if (cllction_data.n_robot_ready == 2)
+        {
+
+            static float buffer_bola_x;
+            static float buffer_bola_y;
+
+            if (cllction_data.bola_x_pada_lapangan != 0 && cllction_data.bola_y_pada_lapangan != 0)
+            {
+                buffer_bola_x = cllction_data.bola_x_pada_lapangan;
+                buffer_bola_y = cllction_data.bola_y_pada_lapangan;
+            }
+
+            if (cllction_data.n_robot_dapat_bola == 0)
+            {
+                pos_x = buffer_bola_x;
+                pos_y = buffer_bola_y;
+            }
+
+            float jarak_ = pythagoras(pos_x, pos_y, cllction_data.bola_x_pada_lapangan, cllction_data.bola_y_pada_lapangan);
+
+            uint8_t n_robot_attacker = -1;
+            uint8_t n_robot_assist = -1;
+
+            for (int i = 0; i < N_ROBOT; i++)
+            {
+                if (entity_robot.role[i] == 1)
+                    n_robot_attacker = i + 1; // Nama Robot Sebenarnya
+                if (entity_robot.role[i] == 3)
+                    n_robot_assist = i + 1; // Nama Robot Sebenarnya
+            }
+
+            if (jarak_ > 125 && cllction_data.n_robot_dapat_bola == n_robot_attacker)
+            {
+                uint8_t role_buffer = entity_robot.role[n_robot_attacker - 1];
+                entity_robot.role[n_robot_attacker - 1] = entity_robot.role[n_robot_assist - 1];
+                entity_robot.role[n_robot_assist - 1] = role_buffer;
+            }
+        }
+    }
+
+    // entity_robot.role[0] = 0; // 1
+    // entity_robot.role[1] = 1; // 2
+    // entity_robot.role[2] = 3;
+    // entity_robot.role[3] = 2;
+    // entity_robot.role[4] = 4;
 };
 
 void setMux1()
@@ -593,67 +652,54 @@ void setObsGroupOnly()
 {
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
-        std::vector<int> obs_x;
-        std::vector<int> obs_y;
-        int len_obs = pc2bs_msg[i].obs_length;
-        if (len_obs == pc2bs_msg[i].obs_index.size() && len_obs == pc2bs_msg[i].obs_dist.size())
+        // std::vector<int> obs_x;
+        // std::vector<int> obs_y;
+        // // int len_obs = pc2bs_msg[i].obs_length;
+        // int len_obs = pc2bs_msg[i].pos_obs_length;
+        // // if (len_obs == pc2bs_msg[i].obs_index.size() && len_obs == pc2bs_msg[i].obs_dist.size())
+        // if (len_obs == pc2bs_msg[i].pos_obs_x.size() && len_obs == pc2bs_msg[i].pos_obs_x.size())
+        // {
+        // for (uint8_t j = 0; j < len_obs; j++)
+        // {
+        //     int dist = pc2bs_msg[i].obs_dist[j];
+        //     int angle = pc2bs_msg[i].obs_index[j] * 2.5;
+
+        //     int obs_x_temp = getAngleToPosX(i, angle, dist);
+        //     int obs_y_temp = getAngleToPosY(i, angle, dist);
+        //     if (!(obs_x_temp == pc2bs_msg[i].pos_x && obs_y_temp == pc2bs_msg[i].pos_y))
+        //     {
+        //         obs_x.push_back(getAngleToPosX(i, angle, dist));
+        //         obs_y.push_back(getAngleToPosY(i, angle, dist));
+        //     }
+        // }
+
+        switch (i)
         {
-            for (uint8_t j = 0; j < len_obs; j++)
-            {
-                int dist = pc2bs_msg[i].obs_dist[j];
-                int angle = pc2bs_msg[i].obs_index[j] * 2.5;
-
-                int obs_x_temp = getAngleToPosX(i, angle, dist);
-                int obs_y_temp = getAngleToPosY(i, angle, dist);
-                if (!(obs_x_temp == pc2bs_msg[i].pos_x && obs_y_temp == pc2bs_msg[i].pos_y))
-                {
-                    obs_x.push_back(getAngleToPosX(i, angle, dist));
-                    obs_y.push_back(getAngleToPosY(i, angle, dist));
-                }
-            }
-
-            switch (i)
-            {
-            case 0:
-                if (!obs_x.empty() && !obs_y.empty())
-                {
-                    entity_robot.group_obs_x_r1 = obs_x;
-                    entity_robot.group_obs_y_r1 = obs_y;
-                }
-                break;
-            case 1:
-                if (!obs_x.empty() && !obs_y.empty())
-                {
-                    entity_robot.group_obs_x_r2 = obs_x;
-                    entity_robot.group_obs_y_r2 = obs_y;
-                }
-                break;
-            case 2:
-                if (!obs_x.empty() && !obs_y.empty())
-                {
-                    entity_robot.group_obs_x_r3 = obs_x;
-                    entity_robot.group_obs_y_r3 = obs_y;
-                }
-                break;
-            case 3:
-                if (!obs_x.empty() && !obs_y.empty())
-                {
-                    entity_robot.group_obs_x_r4 = obs_x;
-                    entity_robot.group_obs_y_r4 = obs_y;
-                }
-                break;
-            case 4:
-                if (!obs_x.empty() && !obs_y.empty())
-                {
-                    entity_robot.group_obs_x_r5 = obs_x;
-                    entity_robot.group_obs_y_r5 = obs_y;
-                }
-                break;
-            }
+        case 0:
+            entity_robot.group_obs_x_r1 = pc2bs_msg[i].pos_obs_x;
+            entity_robot.group_obs_y_r1 = pc2bs_msg[i].pos_obs_y;
+            break;
+        case 1:
+            entity_robot.group_obs_x_r2 = pc2bs_msg[i].pos_obs_x;
+            entity_robot.group_obs_y_r2 = pc2bs_msg[i].pos_obs_y;
+            break;
+        case 2:
+            entity_robot.group_obs_x_r3 = pc2bs_msg[i].pos_obs_x;
+            entity_robot.group_obs_y_r3 = pc2bs_msg[i].pos_obs_y;
+            break;
+        case 3:
+            entity_robot.group_obs_x_r4 = pc2bs_msg[i].pos_obs_x;
+            entity_robot.group_obs_y_r4 = pc2bs_msg[i].pos_obs_y;
+            break;
+        case 4:
+            entity_robot.group_obs_x_r5 = pc2bs_msg[i].pos_obs_x;
+            entity_robot.group_obs_y_r5 = pc2bs_msg[i].pos_obs_y;
+            break;
         }
-        obs_x.clear();
-        obs_y.clear();
     }
+    // obs_x.clear();
+    // obs_y.clear();
+    // }
 }
 
 void setObs()
@@ -769,9 +815,56 @@ void setBS2PC()
     {
         bs2pc_msg.control_power_kicker[i] = fe2be_msg.trim_penendang_robot[i];
     }
-    for (uint8_t i = 0; i < 4; i++)
+    for (uint8_t i = 0; i < 6; i++)
     {
+        // ROS_INFO("pos obs - %d: %d", i, fe2be_msg.pos_obs[i]);
         bs2pc_msg.pos_obs[i] = fe2be_msg.pos_obs[i];
+    }
+
+    // self data for unicast
+    for (int i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.status_active[i] = entity_robot.is_active[i];
+    }
+
+    for (int i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.pos_x[i] = pc2bs_msg[i].pos_x;
+    }
+
+    for (int i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.pos_y[i] = pc2bs_msg[i].pos_y;
+    }
+
+    for (int i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.theta[i] = pc2bs_msg[i].theta;
+    }
+
+    for (int i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.robot_condition[i] = pc2bs_msg[i].robot_condition;
+    }
+
+    for (int i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.robot_condition[i] = pc2bs_msg[i].robot_condition;
+    }
+
+    for (int i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.pass_target_x[i] = pc2bs_msg[i].pass_target_x;
+    }
+
+    for (int i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.pass_target_y[i] = pc2bs_msg[i].pass_target_y;
+    }
+
+    for (int i = 0; i < N_ROBOT; i++)
+    {
+        bs2pc_msg.target_umpan[i] = pc2bs_msg[i].target_umpan;
     }
 };
 
@@ -818,66 +911,66 @@ void setGoalKeeper()
     cllction_data.goalkeeper_field_y = goalkeeper_y;
 }
 
-void setObsGlobal()
-{
+// void setObsGlobal()
+// {
 
-    // make temporary array to store obs_global_x and obs_global_y
+//     // make temporary array to store obs_global_x and obs_global_y
 
-    std::vector<int> obs_region_x;
-    std::vector<int> obs_region_y;
-    std::vector<int> obs_global_x_temp;
-    std::vector<int> obs_global_y_temp;
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        if (isRobotReady(i))
-        {
-            switch (i)
-            {
-            case 0:
-                obs_region_x = entity_robot.group_obs_x_r1;
-                obs_region_y = entity_robot.group_obs_y_r1;
-                break;
-            case 1:
-                obs_region_x = entity_robot.group_obs_x_r2;
-                obs_region_y = entity_robot.group_obs_y_r2;
-                break;
-            case 2:
-                obs_region_x = entity_robot.group_obs_x_r3;
-                obs_region_y = entity_robot.group_obs_y_r3;
-                break;
-            case 3:
+//     std::vector<int> obs_region_x;
+//     std::vector<int> obs_region_y;
+//     std::vector<int> obs_global_x_temp;
+//     std::vector<int> obs_global_y_temp;
+//     for (uint8_t i = 0; i < N_ROBOT; i++)
+//     {
+//         if (isRobotReady(i))
+//         {
+//             switch (i)
+//             {
+//             case 0:
+//                 obs_region_x = entity_robot.group_obs_x_r1;
+//                 obs_region_y = entity_robot.group_obs_y_r1;
+//                 break;
+//             case 1:
+//                 obs_region_x = entity_robot.group_obs_x_r2;
+//                 obs_region_y = entity_robot.group_obs_y_r2;
+//                 break;
+//             case 2:
+//                 obs_region_x = entity_robot.group_obs_x_r3;
+//                 obs_region_y = entity_robot.group_obs_y_r3;
+//                 break;
+//             case 3:
 
-                obs_region_x = entity_robot.group_obs_x_r4;
-                obs_region_y = entity_robot.group_obs_y_r4;
-                break;
-            case 4:
-                obs_region_x = entity_robot.group_obs_x_r5;
-                obs_region_y = entity_robot.group_obs_y_r5;
-                break;
-            }
+//                 obs_region_x = entity_robot.group_obs_x_r4;
+//                 obs_region_y = entity_robot.group_obs_y_r4;
+//                 break;
+//             case 4:
+//                 obs_region_x = entity_robot.group_obs_x_r5;
+//                 obs_region_y = entity_robot.group_obs_y_r5;
+//                 break;
+//             }
 
-            int len_obs = obs_region_x.size();
+//             int len_obs = obs_region_x.size();
 
-            for (int16_t j = 0; j < len_obs; j++)
-            {
-                obs_global_x_temp.push_back(obs_region_x[j]);
-                obs_global_y_temp.push_back(obs_region_y[j]);
-            }
-        }
-    }
-    cllction_data.obs_x_global.clear();
-    cllction_data.obs_y_global.clear();
+//             for (int16_t j = 0; j < len_obs; j++)
+//             {
+//                 obs_global_x_temp.push_back(obs_region_x[j]);
+//                 obs_global_y_temp.push_back(obs_region_y[j]);
+//             }
+//         }
+//     }
+//     cllction_data.obs_x_global.clear();
+//     cllction_data.obs_y_global.clear();
 
-    cllction_data.obs_x_global = obs_global_x_temp;
-    cllction_data.obs_y_global = obs_global_y_temp;
-}
+//     cllction_data.obs_x_global = obs_global_x_temp;
+//     cllction_data.obs_y_global = obs_global_y_temp;
+// }
 
 /* GETTER function */
 uint8_t getNRobotClosestBall()
 {
     uint8_t n_closest_ball = 0;
     int distance_closest = INT_MAX;
-    for (uint8_t i = 0; i < N_ROBOT; i++)
+    for (uint8_t i = 1; i < N_ROBOT; i++)
     {
         if (isRobotReady(i) && pc2bs_msg[i].status_bola == 1)
         {
@@ -892,10 +985,10 @@ uint8_t getNRobotClosestBall()
     }
 
     // if there is no ball detected in robot main, then check keeper
-    if (n_closest_ball == 0 && isRobotReady(0) && pc2bs_msg[0].status_bola == 1)
-    {
-        n_closest_ball = 1;
-    }
+    // if (n_closest_ball == 0 && isRobotReady(0) && pc2bs_msg[0].status_bola == 1)
+    // {
+    //     n_closest_ball = 1;
+    // }
 
     return n_closest_ball;
 }
@@ -941,316 +1034,316 @@ uint8_t getNRobotCloser(uint8_t robot_ind)
     return n_robot_closer + 1;
 }
 
-void setObsGroup()
-{
-    std::vector<int16_t> obs_angle_result;
-    std::vector<int16_t> obs_dist_result;
-    uint8_t dist_max = 100;
-    float_t angle_max = 6;
-    uint8_t counter_offset = 3;
-    int dist_back = 25;
+// void setObsGroup()
+// {
+//     std::vector<int16_t> obs_angle_result;
+//     std::vector<int16_t> obs_dist_result;
+//     uint8_t dist_max = 100;
+//     float_t angle_max = 6;
+//     uint8_t counter_offset = 3;
+//     int dist_back = 25;
 
-    for (uint8_t i = 0; i < N_ROBOT; i++)
-    {
-        std::vector<int16_t> obs_dist_dummy;
-        std::vector<int16_t> obs_angle_dummy;
-        std::vector<int16_t> obs_dist_temp;
-        std::vector<int16_t> obs_angle_temp;
+//     for (uint8_t i = 0; i < N_ROBOT; i++)
+//     {
+//         std::vector<int16_t> obs_dist_dummy;
+//         std::vector<int16_t> obs_angle_dummy;
+//         std::vector<int16_t> obs_dist_temp;
+//         std::vector<int16_t> obs_angle_temp;
 
-        // assign obs_dist & obs_angle
-        obs_dist_dummy = pc2bs_msg[i].obs_dist;
+//         // assign obs_dist & obs_angle
+//         obs_dist_dummy = pc2bs_msg[i].obs_dist;
 
-        for (uint8_t j = 0; j < pc2bs_msg[i].obs_length; j++)
-        {
-            uint16_t angle = ceil(pc2bs_msg[i].obs_index[j] * 2.5);
-            obs_angle_dummy.push_back(angle);
-        }
+//         for (uint8_t j = 0; j < pc2bs_msg[i].obs_length; j++)
+//         {
+//             uint16_t angle = ceil(pc2bs_msg[i].obs_index[j] * 2.5);
+//             obs_angle_dummy.push_back(angle);
+//         }
 
-        // abs angle
-        for (int16_t &value : obs_angle_dummy)
-        {
-            if (value < 0)
-            {
-                value = 360 + value;
-            }
-        }
+//         // abs angle
+//         for (int16_t &value : obs_angle_dummy)
+//         {
+//             if (value < 0)
+//             {
+//                 value = 360 + value;
+//             }
+//         }
 
-        std::vector<std::tuple<int16_t, int16_t, int16_t>> arr_temp;
-        std::vector<int16_t> sort_arr;
+//         std::vector<std::tuple<int16_t, int16_t, int16_t>> arr_temp;
+//         std::vector<int16_t> sort_arr;
 
-        // sorted arr based on angle
-        for (uint8_t j = 0; j < obs_angle_dummy.size(); j++)
-        {
-            arr_temp.push_back(std::make_tuple(obs_angle_dummy[j], j, obs_dist_dummy[j]));
-        }
-        sort(arr_temp.begin(), arr_temp.end());
+//         // sorted arr based on angle
+//         for (uint8_t j = 0; j < obs_angle_dummy.size(); j++)
+//         {
+//             arr_temp.push_back(std::make_tuple(obs_angle_dummy[j], j, obs_dist_dummy[j]));
+//         }
+//         sort(arr_temp.begin(), arr_temp.end());
 
-        obs_dist_dummy.clear();
-        obs_angle_dummy.clear();
-        obs_angle_result.clear();
-        obs_dist_result.clear();
-        obs_dist_temp.clear();
-        obs_angle_temp.clear();
+//         obs_dist_dummy.clear();
+//         obs_angle_dummy.clear();
+//         obs_angle_result.clear();
+//         obs_dist_result.clear();
+//         obs_dist_temp.clear();
+//         obs_angle_temp.clear();
 
-        // update obs_dist_dummy based on sorted arr
-        for (auto &item : arr_temp)
-        {
-            obs_angle_dummy.push_back(std::get<0>(item));
-            obs_dist_dummy.push_back(std::get<2>(item));
-        }
+//         // update obs_dist_dummy based on sorted arr
+//         for (auto &item : arr_temp)
+//         {
+//             obs_angle_dummy.push_back(std::get<0>(item));
+//             obs_dist_dummy.push_back(std::get<2>(item));
+//         }
 
-        // jika langsung assign error
-        int16_t prev_dist = 0;
-        int16_t prev_angle = 0;
+//         // jika langsung assign error
+//         int16_t prev_dist = 0;
+//         int16_t prev_angle = 0;
 
-        if (!obs_dist_dummy.empty() && !obs_angle_dummy.empty())
-        {
-            prev_dist = obs_dist_dummy[0];
-            prev_angle = obs_angle_dummy[0];
-        }
+//         if (!obs_dist_dummy.empty() && !obs_angle_dummy.empty())
+//         {
+//             prev_dist = obs_dist_dummy[0];
+//             prev_angle = obs_angle_dummy[0];
+//         }
 
-        int16_t dist;
-        int16_t angle;
+//         int16_t dist;
+//         int16_t angle;
 
-        bool status = false;
-        bool prev_status = false;
-        std::vector<int16_t> obs_status;
+//         bool status = false;
+//         bool prev_status = false;
+//         std::vector<int16_t> obs_status;
 
-        uint8_t start = 0;
-        uint8_t stop = 0;
-        uint8_t counter = 0;
-        uint8_t len_obs = pc2bs_msg[i].obs_length;
+//         uint8_t start = 0;
+//         uint8_t stop = 0;
+//         uint8_t counter = 0;
+//         uint8_t len_obs = pc2bs_msg[i].obs_length;
 
-        if (!obs_dist_dummy.empty() && !obs_angle_dummy.empty())
-        {
-            // diskontinu: arr[0] & arr[last]
-            int16_t dist_diff = abs(obs_dist_dummy[0] - obs_dist_dummy[obs_dist_dummy.size() - 1]);
-            int16_t angle_diff = abs(obs_angle_dummy[0] - (360 - obs_angle_dummy[obs_angle_dummy.size() - 1]));
-            angle_diff = angle_diff < 0 ? angle_diff * (-1) : angle_diff;
+//         if (!obs_dist_dummy.empty() && !obs_angle_dummy.empty())
+//         {
+//             // diskontinu: arr[0] & arr[last]
+//             int16_t dist_diff = abs(obs_dist_dummy[0] - obs_dist_dummy[obs_dist_dummy.size() - 1]);
+//             int16_t angle_diff = abs(obs_angle_dummy[0] - (360 - obs_angle_dummy[obs_angle_dummy.size() - 1]));
+//             angle_diff = angle_diff < 0 ? angle_diff * (-1) : angle_diff;
 
-            if ((dist_diff <= dist_max) && (angle_diff <= angle_max))
-            {
-                uint8_t counter_up = 0;
-                uint8_t counter_down = 0;
-                uint8_t counter_mean = 0;
-                uint8_t index = 0;
+//             if ((dist_diff <= dist_max) && (angle_diff <= angle_max))
+//             {
+//                 uint8_t counter_up = 0;
+//                 uint8_t counter_down = 0;
+//                 uint8_t counter_mean = 0;
+//                 uint8_t index = 0;
 
-                // depan
-                for (uint8_t i = 0; i < len_obs - 1; i++)
-                {
-                    if (
-                        (abs(obs_dist_dummy[i] - obs_dist_dummy[i + 1]) > dist_max) ||
-                        (abs(obs_angle_dummy[i] - obs_angle_dummy[i + 1]) > angle_max))
-                    {
-                        counter_up++;
-                        break;
-                    }
-                    counter_up++;
-                }
+//                 // depan
+//                 for (uint8_t i = 0; i < len_obs - 1; i++)
+//                 {
+//                     if (
+//                         (abs(obs_dist_dummy[i] - obs_dist_dummy[i + 1]) > dist_max) ||
+//                         (abs(obs_angle_dummy[i] - obs_angle_dummy[i + 1]) > angle_max))
+//                     {
+//                         counter_up++;
+//                         break;
+//                     }
+//                     counter_up++;
+//                 }
 
-                // belakang
-                if (counter_up < len_obs - 1)
-                {
-                    for (uint8_t i = len_obs - 1; i >= 1; i--)
-                    {
-                        if (
-                            (abs(obs_dist_dummy[i] - obs_dist_dummy[i - 1]) > dist_max) ||
-                            (abs(obs_angle_dummy[i] - obs_angle_dummy[i - 1]) > angle_max))
-                        {
-                            counter_down++;
-                            break;
-                        }
-                        counter_down++;
-                    }
-                }
+//                 // belakang
+//                 if (counter_up < len_obs - 1)
+//                 {
+//                     for (uint8_t i = len_obs - 1; i >= 1; i--)
+//                     {
+//                         if (
+//                             (abs(obs_dist_dummy[i] - obs_dist_dummy[i - 1]) > dist_max) ||
+//                             (abs(obs_angle_dummy[i] - obs_angle_dummy[i - 1]) > angle_max))
+//                         {
+//                             counter_down++;
+//                             break;
+//                         }
+//                         counter_down++;
+//                     }
+//                 }
 
-                counter_mean = ceil((counter_up + counter_down) / 2);
+//                 counter_mean = ceil((counter_up + counter_down) / 2);
 
-                if (counter_mean > counter_up)
-                {
-                    index = len_obs - (counter_mean - counter_up);
-                }
-                else
-                {
-                    index = counter_up - counter_mean;
-                }
+//                 if (counter_mean > counter_up)
+//                 {
+//                     index = len_obs - (counter_mean - counter_up);
+//                 }
+//                 else
+//                 {
+//                     index = counter_up - counter_mean;
+//                 }
 
-                obs_angle_result.push_back(obs_angle_dummy[index]);
-                obs_dist_result.push_back(obs_dist_dummy[index] + dist_back);
+//                 obs_angle_result.push_back(obs_angle_dummy[index]);
+//                 obs_dist_result.push_back(obs_dist_dummy[index] + dist_back);
 
-                // assign 9999
-                for (uint8_t i = 0; i <= counter_up - 1; i++)
-                {
-                    obs_angle_dummy[i] = 9999;
-                    obs_dist_dummy[i] = 9999;
-                }
+//                 // assign 9999
+//                 for (uint8_t i = 0; i <= counter_up - 1; i++)
+//                 {
+//                     obs_angle_dummy[i] = 9999;
+//                     obs_dist_dummy[i] = 9999;
+//                 }
 
-                for (uint8_t i = len_obs - 1; i >= len_obs - counter_down; i--)
-                {
-                    for (uint8_t j = i; j < len_obs - 1; j++)
-                    {
-                        obs_angle_dummy[j] = obs_angle_dummy[j + 1];
-                        obs_dist_dummy[j] = obs_dist_dummy[j + 1];
-                    }
-                    obs_angle_dummy[len_obs - 1] = 9999;
-                    obs_dist_dummy[len_obs - 1] = 9999;
-                }
+//                 for (uint8_t i = len_obs - 1; i >= len_obs - counter_down; i--)
+//                 {
+//                     for (uint8_t j = i; j < len_obs - 1; j++)
+//                     {
+//                         obs_angle_dummy[j] = obs_angle_dummy[j + 1];
+//                         obs_dist_dummy[j] = obs_dist_dummy[j + 1];
+//                     }
+//                     obs_angle_dummy[len_obs - 1] = 9999;
+//                     obs_dist_dummy[len_obs - 1] = 9999;
+//                 }
 
-                float temp_angle, temp_dist;
+//                 float temp_angle, temp_dist;
 
-                for (uint8_t i = 0; i < len_obs - 1; i++)
-                {
-                    for (uint8_t j = i + 1; j < len_obs; j++)
-                    {
-                        if (obs_angle_dummy[j] < obs_angle_dummy[i])
-                        {
-                            // Tukar nilai obs_angle_dummy
-                            temp_angle = obs_angle_dummy[i];
-                            obs_angle_dummy[i] = obs_angle_dummy[j];
-                            obs_angle_dummy[j] = temp_angle;
+//                 for (uint8_t i = 0; i < len_obs - 1; i++)
+//                 {
+//                     for (uint8_t j = i + 1; j < len_obs; j++)
+//                     {
+//                         if (obs_angle_dummy[j] < obs_angle_dummy[i])
+//                         {
+//                             // Tukar nilai obs_angle_dummy
+//                             temp_angle = obs_angle_dummy[i];
+//                             obs_angle_dummy[i] = obs_angle_dummy[j];
+//                             obs_angle_dummy[j] = temp_angle;
 
-                            // Tukar nilai obs_dist_dummy
-                            temp_dist = obs_dist_dummy[i];
-                            obs_dist_dummy[i] = obs_dist_dummy[j];
-                            obs_dist_dummy[j] = temp_dist;
-                        }
-                    }
-                }
-            }
+//                             // Tukar nilai obs_dist_dummy
+//                             temp_dist = obs_dist_dummy[i];
+//                             obs_dist_dummy[i] = obs_dist_dummy[j];
+//                             obs_dist_dummy[j] = temp_dist;
+//                         }
+//                     }
+//                 }
+//             }
 
-            // angle & dist difference
-            for (uint8_t i = 1; i < obs_angle_dummy.size(); i++)
-            {
-                if (obs_angle_dummy[i] != 9999 && obs_dist_dummy[i] != 9999)
-                {
-                    prev_angle = obs_angle_dummy[i - 1];
-                    prev_dist = obs_dist_dummy[i - 1];
-                    angle = obs_angle_dummy[i];
-                    dist = obs_dist_dummy[i];
-                    obs_angle_temp.push_back(abs(angle - prev_angle));
-                    obs_dist_temp.push_back(abs(dist - prev_dist));
-                    prev_angle = obs_angle_dummy[i];
-                    prev_dist = obs_dist_dummy[i];
-                }
-            }
+//             // angle & dist difference
+//             for (uint8_t i = 1; i < obs_angle_dummy.size(); i++)
+//             {
+//                 if (obs_angle_dummy[i] != 9999 && obs_dist_dummy[i] != 9999)
+//                 {
+//                     prev_angle = obs_angle_dummy[i - 1];
+//                     prev_dist = obs_dist_dummy[i - 1];
+//                     angle = obs_angle_dummy[i];
+//                     dist = obs_dist_dummy[i];
+//                     obs_angle_temp.push_back(abs(angle - prev_angle));
+//                     obs_dist_temp.push_back(abs(dist - prev_dist));
+//                     prev_angle = obs_angle_dummy[i];
+//                     prev_dist = obs_dist_dummy[i];
+//                 }
+//             }
 
-            // assign to temp when != 9999
-            if (
-                obs_angle_dummy[0] != 9999 &&
-                obs_angle_dummy[obs_angle_dummy.size() - 1] != 9999 &&
-                obs_dist_dummy[0] != 9999 &&
-                obs_dist_dummy[obs_dist_dummy.size() - 1] != 9999)
-            {
-                obs_angle_temp.push_back(
-                    abs(
-                        obs_angle_dummy[0] - obs_angle_dummy[obs_angle_dummy.size() - 1]));
-                obs_dist_temp.push_back(
-                    abs(
-                        obs_dist_dummy[0] - obs_dist_dummy[obs_dist_dummy.size() - 1]));
-            }
+//             // assign to temp when != 9999
+//             if (
+//                 obs_angle_dummy[0] != 9999 &&
+//                 obs_angle_dummy[obs_angle_dummy.size() - 1] != 9999 &&
+//                 obs_dist_dummy[0] != 9999 &&
+//                 obs_dist_dummy[obs_dist_dummy.size() - 1] != 9999)
+//             {
+//                 obs_angle_temp.push_back(
+//                     abs(
+//                         obs_angle_dummy[0] - obs_angle_dummy[obs_angle_dummy.size() - 1]));
+//                 obs_dist_temp.push_back(
+//                     abs(
+//                         obs_dist_dummy[0] - obs_dist_dummy[obs_dist_dummy.size() - 1]));
+//             }
 
-            // check distance between
-            for (uint8_t i = 0; i < obs_angle_temp.size(); i++)
-            {
-                prev_status = status;
+//             // check distance between
+//             for (uint8_t i = 0; i < obs_angle_temp.size(); i++)
+//             {
+//                 prev_status = status;
 
-                if (obs_angle_temp[i] <= angle_max && obs_dist_temp[i] <= dist_max)
-                {
-                    obs_status.push_back(true);
-                    status = true;
-                }
-                else
-                {
-                    obs_status.push_back(false);
-                    status = false;
-                }
+//                 if (obs_angle_temp[i] <= angle_max && obs_dist_temp[i] <= dist_max)
+//                 {
+//                     obs_status.push_back(true);
+//                     status = true;
+//                 }
+//                 else
+//                 {
+//                     obs_status.push_back(false);
+//                     status = false;
+//                 }
 
-                if (!prev_status && status)
-                {
-                    start = i;
-                }
-                if (prev_status && !status)
-                {
-                    // ex: 0 1 1 1 -> start = 1; stop = 3;
-                    stop = i + 1;
-                }
+//                 if (!prev_status && status)
+//                 {
+//                     start = i;
+//                 }
+//                 if (prev_status && !status)
+//                 {
+//                     // ex: 0 1 1 1 -> start = 1; stop = 3;
+//                     stop = i + 1;
+//                 }
 
-                if (i == obs_angle_temp.size() - 1)
-                {
-                    if (prev_status == status)
-                    {
-                        stop = i + 1;
-                        status = false;
-                    }
-                }
+//                 if (i == obs_angle_temp.size() - 1)
+//                 {
+//                     if (prev_status == status)
+//                     {
+//                         stop = i + 1;
+//                         status = false;
+//                     }
+//                 }
 
-                if (prev_status && !status)
-                {
-                    if (stop > start)
-                    {
-                        counter = stop - start;
-                        if (counter >= counter_offset)
-                        {
-                            int16_t dist_mean = 0;
-                            int16_t angle_mean = 0;
-                            for (uint8_t j = start; j <= stop; j++)
-                            {
-                                if (j == stop)
-                                {
-                                    dist_mean += obs_dist_dummy[0];
-                                    angle_mean += obs_angle_dummy[0];
-                                    continue;
-                                }
-                                dist_mean += obs_dist_dummy[j];
-                                angle_mean += obs_angle_dummy[j];
-                            }
-                            dist_mean /= counter + 1;
-                            angle_mean /= counter + 1;
+//                 if (prev_status && !status)
+//                 {
+//                     if (stop > start)
+//                     {
+//                         counter = stop - start;
+//                         if (counter >= counter_offset)
+//                         {
+//                             int16_t dist_mean = 0;
+//                             int16_t angle_mean = 0;
+//                             for (uint8_t j = start; j <= stop; j++)
+//                             {
+//                                 if (j == stop)
+//                                 {
+//                                     dist_mean += obs_dist_dummy[0];
+//                                     angle_mean += obs_angle_dummy[0];
+//                                     continue;
+//                                 }
+//                                 dist_mean += obs_dist_dummy[j];
+//                                 angle_mean += obs_angle_dummy[j];
+//                             }
+//                             dist_mean /= counter + 1;
+//                             angle_mean /= counter + 1;
 
-                            obs_dist_result.push_back(dist_mean + dist_back);
-                            obs_angle_result.push_back(angle_mean);
-                        }
-                    }
-                }
-            }
+//                             obs_dist_result.push_back(dist_mean + dist_back);
+//                             obs_angle_result.push_back(angle_mean);
+//                         }
+//                     }
+//                 }
+//             }
 
-            std::vector<int> obs_x;
-            std::vector<int> obs_y;
+//             std::vector<int> obs_x;
+//             std::vector<int> obs_y;
 
-            for (uint8_t j = 0; j < obs_angle_result.size(); j++)
-            {
-                int dist = obs_dist_result[j];
-                int angle = obs_angle_result[j];
-                obs_x.push_back(getAngleToPosX(i, angle, dist));
-                obs_y.push_back(getAngleToPosY(i, angle, dist));
-            }
+//             for (uint8_t j = 0; j < obs_angle_result.size(); j++)
+//             {
+//                 int dist = obs_dist_result[j];
+//                 int angle = obs_angle_result[j];
+//                 obs_x.push_back(getAngleToPosX(i, angle, dist));
+//                 obs_y.push_back(getAngleToPosY(i, angle, dist));
+//             }
 
-            switch (i)
-            {
-            case 0:
-                entity_robot.group_obs_x_r1 = obs_x;
-                entity_robot.group_obs_y_r1 = obs_y;
-                break;
-            case 1:
-                entity_robot.group_obs_x_r2 = obs_x;
-                entity_robot.group_obs_y_r2 = obs_y;
-                break;
-            case 2:
-                entity_robot.group_obs_x_r3 = obs_x;
-                entity_robot.group_obs_y_r3 = obs_y;
-                break;
-            case 3:
-                entity_robot.group_obs_x_r4 = obs_x;
-                entity_robot.group_obs_y_r4 = obs_y;
-                break;
-            case 4:
-                entity_robot.group_obs_x_r5 = obs_x;
-                entity_robot.group_obs_y_r5 = obs_y;
-                break;
-            }
-        }
-    }
-};
+//             switch (i)
+//             {
+//             case 0:
+//                 entity_robot.group_obs_x_r1 = obs_x;
+//                 entity_robot.group_obs_y_r1 = obs_y;
+//                 break;
+//             case 1:
+//                 entity_robot.group_obs_x_r2 = obs_x;
+//                 entity_robot.group_obs_y_r2 = obs_y;
+//                 break;
+//             case 2:
+//                 entity_robot.group_obs_x_r3 = obs_x;
+//                 entity_robot.group_obs_y_r3 = obs_y;
+//                 break;
+//             case 3:
+//                 entity_robot.group_obs_x_r4 = obs_x;
+//                 entity_robot.group_obs_y_r4 = obs_y;
+//                 break;
+//             case 4:
+//                 entity_robot.group_obs_x_r5 = obs_x;
+//                 entity_robot.group_obs_y_r5 = obs_y;
+//                 break;
+//             }
+//         }
+//     }
+// };
 
 int16_t getAngleToPosX(uint8_t robot_ind, int angle, int dist)
 {
@@ -1274,9 +1367,9 @@ int pythagoras(int x1, int y1, int x2, int y2)
 bool isBallAppear()
 {
     bool is_ball_appear = false;
-    for (uint8_t i = 0; i < N_ROBOT; i++)
+    for (uint8_t i = 1; i < N_ROBOT; i++)
     {
-        if (pc2bs_msg[i].status_bola == 1)
+        if (pc2bs_msg[i].status_bola == 1 && isRobotReady(i))
         {
             is_ball_appear = true;
         }
@@ -1291,7 +1384,7 @@ uint8_t *isBallCatched()
     is_ball_catched[1] = 0;
     for (uint8_t i = 1; i < N_ROBOT; i++)
     {
-        if (pc2bs_msg[i].status_bola == 2)
+        if (pc2bs_msg[i].status_bola == 2 && isRobotReady(i))
         {
             is_ball_catched[0] = 1;
             is_ball_catched[1] = i;

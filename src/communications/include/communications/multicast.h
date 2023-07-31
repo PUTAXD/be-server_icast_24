@@ -15,8 +15,8 @@ int sd;
 
 struct sockaddr src_addr;
 socklen_t addr_len = sizeof(src_addr);
-char ip_group[] = "224.16.32.82";
-int port = 1027;
+char ip_group[] = "224.16.32.69";
+int port = 3333;
 
 void openSocket()
 {
@@ -38,9 +38,32 @@ void openSocket()
     /* datagrams are to be received. */
     group.imr_multiaddr.s_addr = inet_addr(ip_group);
     group.imr_interface.s_addr = inet_addr("0.0.0.0");
+
+    if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_IF, (char *)&group, sizeof(group)) < 0)
+    {
+        perror("Adding multicast group error");
+        exit(1);
+    }
+
     if (setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
     {
         perror("Adding multicast group error");
+        close(sd);
+        exit(1);
+    }
+
+    int opt = 0;
+    if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_LOOP, &opt, sizeof(opt)) < 0)
+    {
+        perror("Loopback error");
+        close(sd);
+        exit(1);
+    }
+
+    opt = 1;
+    if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_TTL, &opt, sizeof(opt)) < 0)
+    {
+        perror("Loopback error");
         close(sd);
         exit(1);
     }
@@ -55,5 +78,13 @@ void openSocket()
         perror("Binding datagram socket error");
         close(sd);
         exit(1);
+    }
+}
+
+void closeSocket()
+{
+    if (sd != -1)
+    {
+        shutdown(sd, SHUT_RDWR);
     }
 }

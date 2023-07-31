@@ -1,6 +1,7 @@
 #include "communications/multicast.h"
 #include "communications/PC2BS.h"
 #include "communications/BS2PC.h"
+#include <signal.h>
 
 #define N_ROBOT 5
 #define LEN_MSG 256
@@ -13,9 +14,21 @@ ros::Publisher pc2bs_pub[N_ROBOT];
 void cllbckRcvMtcast(const ros::TimerEvent &event);
 void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg);
 
+void signal_catch(int sig)
+{
+    if (sig == SIGINT)
+    {
+        closeSocket();
+        usleep(50000);
+        ros::shutdown();
+    }
+}
+
+double time_kirim;
+
 int main(int argc, char *argv[])
 {
-    ros::init(argc, argv, "comm_multicast");
+    ros::init(argc, argv, "comm_native");
     ros::NodeHandle n;
     ros::MultiThreadedSpinner spinner(4);
 
@@ -24,9 +37,9 @@ int main(int argc, char *argv[])
 
     openSocket();
 
-    timer_cllbck_rcv = n.createTimer(ros::Duration(0.001), cllbckRcvMtcast);
+    timer_cllbck_rcv = n.createTimer(ros::Duration(0.0000001), cllbckRcvMtcast);
 
-    bs2pc_sub = n.subscribe("bs2pc", 1000, cllbckSndMtcast);
+    bs2pc_sub = n.subscribe("bs2pc", 1, cllbckSndMtcast);
 
     for (int i = 0; i < N_ROBOT; i++)
     {
@@ -34,6 +47,8 @@ int main(int argc, char *argv[])
         sprintf(str_topic, "pc2bs_r%d", i + 1);
         pc2bs_pub[i] = n.advertise<communications::PC2BS>(str_topic, 1000);
     }
+
+    signal(SIGINT, signal_catch);
 
     spinner.spin();
 
@@ -43,13 +58,17 @@ int main(int argc, char *argv[])
 void cllbckRcvMtcast(const ros::TimerEvent &event)
 {
     char recv_buf[LEN_MSG];
-    uint8_t nrecv = recvfrom(sd, recv_buf, LEN_MSG, MSG_DONTWAIT, &src_addr, &addr_len);
+    int16_t nrecv = recvfrom(sd, recv_buf, LEN_MSG, 0, &src_addr, &addr_len);
 
-    if ((nrecv > 0 && nrecv < 255) && (recv_buf[3] > '0' && recv_buf[3] <= '5') && (recv_buf[0] == 'i' && recv_buf[1] == 't' && recv_buf[2] == 's'))
+    if (nrecv > 0 && (recv_buf[3] > '0' && recv_buf[3] <= '5') && (recv_buf[0] == 'i' && recv_buf[1] == 't' && recv_buf[2] == 's'))
     {
         uint8_t n_robot = recv_buf[3] - '0';
+        double recv_time = ros::Time::now().toSec();
+
         int counter = 4;
         int data_size = 0;
+
+        pc2bs_msg.mcast_delay = (uint64_t)((recv_time - time_kirim) * 1000000);
 
         data_size = sizeof(int64_t);
         memcpy(&pc2bs_msg.epoch, recv_buf + counter, data_size);
@@ -127,21 +146,21 @@ void cllbckRcvMtcast(const ros::TimerEvent &event)
         memcpy(&pc2bs_msg.goalkeeper_field_y, recv_buf + counter, data_size);
         counter += data_size;
 
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.ball_next_x, recv_buf + counter, data_size);
-        counter += data_size;
+        // data_size = sizeof(int16_t);
+        // memcpy(&pc2bs_msg.ball_next_x, recv_buf + counter, data_size);
+        // counter += data_size;
 
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.ball_next_y, recv_buf + counter, data_size);
-        counter += data_size;
+        // data_size = sizeof(int16_t);
+        // memcpy(&pc2bs_msg.ball_next_y, recv_buf + counter, data_size);
+        // counter += data_size;
 
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.robot_next_x, recv_buf + counter, data_size);
-        counter += data_size;
+        // data_size = sizeof(int16_t);
+        // memcpy(&pc2bs_msg.robot_next_x, recv_buf + counter, data_size);
+        // counter += data_size;
 
-        data_size = sizeof(int16_t);
-        memcpy(&pc2bs_msg.robot_next_y, recv_buf + counter, data_size);
-        counter += data_size;
+        // data_size = sizeof(int16_t);
+        // memcpy(&pc2bs_msg.robot_next_y, recv_buf + counter, data_size);
+        // counter += data_size;
 
         pc2bs_msg.n_robot = n_robot;
 
@@ -241,5 +260,9 @@ void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg)
     memcpy(send_buf + counter, &msg->passing_counter, data_size);
     counter += data_size;
 
+    static double prev_time_send = 0;
     uint sent = sendto(sd, send_buf, counter, 0, (struct sockaddr *)&localSock, sizeof(struct sockaddr));
+    time_kirim = ros::Time::now().toSec();
+    // ROS_ERROR("send: %lf -> %lf", time_kirim, time_kirim - prev_time_send);
+    prev_time_send = time_kirim;
 }
