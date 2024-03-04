@@ -89,6 +89,8 @@ include
 add_executable(basestation src/basestation.cpp)
 target_link_libraries(basestation ${catkin_LIBRARIES})
 
+add_dependencies(basestation communications_generate_messages_cpp)
+
 
 
 

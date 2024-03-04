@@ -1,0 +1,39 @@
+float32 pose_x_1
+float32 pose_y_1
+float32 pose_theta_1
+float32 vel_x_1
+float32 vel_y_1
+float32 vel_theta_1
+uint8 ball_is_caught_1
+uint8 ball_is_visible_1
+float32 ball_pos_x_1
+float32 ball_pos_y_1
+float32 ball_vel_x_1
+float32 ball_vel_y_1
+
+float32 pose_x_2
+float32 pose_y_2
+float32 pose_theta_2
+float32 vel_x_2
+float32 vel_y_2
+float32 vel_theta_2
+uint8 ball_is_caught_2
+uint8 ball_is_visible_2
+float32 ball_pos_x_2
+float32 ball_pos_y_2
+float32 ball_vel_x_2
+float32 ball_vel_y_2
+
+float32 pose_x_3
+float32 pose_y_3
+float32 pose_theta_3
+float32 vel_x_3
+float32 vel_y_3
+float32 vel_theta_3
+uint8 ball_is_caught_3
+uint8 ball_is_visible_3
+float32 ball_pos_x_3
+float32 ball_pos_y_3
+float32 ball_vel_x_3
+float32 ball_vel_y_3
+

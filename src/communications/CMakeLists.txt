@@ -22,6 +22,8 @@ add_message_files(
   FILES
   PC2BS.msg
   BS2PC.msg
+  bs2server.msg
+  server2bs.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -76,7 +78,7 @@ generate_messages(
 catkin_package(
  INCLUDE_DIRS include
 #  LIBRARIES communications
- CATKIN_DEPENDS roscpp rospy std_msgs
+ CATKIN_DEPENDS roscpp std_msgs
 #  DEPENDS system_lib
 )
 
@@ -111,11 +113,22 @@ include
 # target_link_libraries(comm_refbox ${catkin_LIBRARIES})
 # add_dependencies(node_talker src/talker.cpp)
 
-add_executable(comm_multicast src/comm_multicast.cpp)
-target_link_libraries(comm_multicast ${YAML_CPP_LIBRARIES} ${catkin_LIBRARIES})
+# add_library(lib_icast
+# include/communications/icast.hpp
+# include/communications/dictionary.hpp
+# include/communications/multicast3.hpp
+# src/icast.cpp
+# src/dictionary.cpp
+# src/multicast3.cpp
+# )
 
-add_executable(comm_native src/comm_native.cpp)
-target_link_libraries(comm_native ${YAML_CPP_LIBRARIES} ${catkin_LIBRARIES})
+add_executable(comm_multicast src/comm_multicast.cpp)
+target_link_libraries(comm_multicast ${YAML_CPP_LIBRARIES} ${catkin_LIBRARIES} icast)
+
+# add_executable(comm_native src/comm_native.cpp)
+# target_link_libraries(comm_native ${YAML_CPP_LIBRARIES} ${catkin_LIBRARIES})
+
+add_dependencies(comm_multicast communications_generate_messages_cpp)
 
 # add_dependencies(node_talker src/talker.cpp)
 

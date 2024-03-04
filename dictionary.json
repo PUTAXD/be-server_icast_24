@@ -1,0 +1,87 @@
+{
+  "agent0": {
+    "command": {
+      "data": "uint1"
+    },
+    "pos_offset": {
+      "agent": "uint1",
+      "x": "float4",
+      "y": "float4",
+      "theta": "float4"
+    },
+    "vel_scale": {
+      "agent": "uint1",
+      "translation": "float4",
+      "rotation": "float4"
+    }
+  },
+  "agent1": {
+    "pos": {
+      "x": "float4",
+      "y": "float4",
+      "theta": "float4"
+    },
+    "vel": {
+      "x": "float4",
+      "y": "float4",
+      "theta": "float4"
+    },
+    "ball": {
+      "is_caught": "uint1",
+      "is_visible": "uint1",
+      "x": "float4[5]",
+      "y": "float4[5]",
+      "vx": "float4[5]",
+      "vy": "float4[5]"
+    },
+    "laserscan": {
+      "distance": "float4[144]"
+    }
+  },
+  "agent2": {
+    "pos": {
+      "x": "float4",
+      "y": "float4",
+      "theta": "float4"
+    },
+    "vel": {
+      "x": "float4",
+      "y": "float4",
+      "theta": "float4"
+    },
+    "ball": {
+      "is_caught": "uint1",
+      "is_visible": "uint1",
+      "x": "float4[5]",
+      "y": "float4[5]",
+      "vx": "float4[5]",
+      "vy": "float4[5]"
+    },
+    "laserscan": {
+      "distance": "float4[144]"
+    }
+  },
+  "agent3": {
+    "pos": {
+      "x": "float4",
+      "y": "float4",
+      "theta": "float4"
+    },
+    "vel": {
+      "x": "float4",
+      "y": "float4",
+      "theta": "float4"
+    },
+    "ball": {
+      "is_caught": "uint1",
+      "is_visible": "uint1",
+      "x": "float4[5]",
+      "y": "float4[5]",
+      "vx": "float4[5]",
+      "vy": "float4[5]"
+    },
+    "laserscan": {
+      "distance": "float4[144]"
+    }
+  }
+}
