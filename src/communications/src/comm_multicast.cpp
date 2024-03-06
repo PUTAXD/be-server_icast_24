@@ -4,17 +4,23 @@
 
 //--Include Libraries
 #include <icast.hpp>
-#include <icast_type.h>
 
 //--ROS Messages
-#include "communications/bs2server.h"
-#include "communications/server2bs.h"
+#include "basestation/EntityRobot.h"
+#include "basestation/FE2BE.h"
+#include "communications/BS2PC.h"
+#include "communications/PC2BS.h"
+
+#define N_ROBOT 5
+#define LEN_MSG 256
 
 //--Publisher
-ros::Publisher pub_server2bs;
+ros::Publisher pc2bs_pub[N_ROBOT];
 
 //--Subscriber
-ros::Subscriber sub_bs2server;
+ros::Subscriber bs2pc_sub;
+ros::Subscriber entity_sub;
+ros::Subscriber fe2be_sub;
 
 //--Timer
 ros::Timer tim_routine;
@@ -25,14 +31,15 @@ Icast* icast = Icast::getInstance();
 //--Prototypes
 void timeCallback(const ros::TimerEvent& event);
 void setDataToBeSend(Dictionary* dc_ptr);
-void bsToServerCallback(const communications::bs2server::ConstPtr& msg);
+void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg);
 
 //-Global Variables
 command_t command_bs;
 pos_t my_robot_pose;
 pos_t agent_robot_pose;
 
-communications::server2bs msg_server2bs;
+basestation::EntityRobot entity_msg;
+basestation::FE2BE fe2be_msg;
 
 int main(int argc, char** argv)
 {
@@ -40,19 +47,21 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
     ros::MultiThreadedSpinner spinner(2);
 
-    pub_server2bs = nh.advertise<communications::server2bs>("server2bs", 1);
-
-    char config_file[100];
-    std::string current_dir = ros::package::getPath("communications");
-    sprintf(config_file, "%s/../../", current_dir.c_str());
-    printf("%s\n", config_file);
-    icast->init(config_file);
+    icast->init();
 
     if (!icast->mc->initialized()) {
         std::cout << "Multicast not ready" << std::endl;
         ros::shutdown();
         return 0;
     }
+
+    for (int i = 0; i < N_ROBOT; i++) {
+        char str_topic[100];
+        sprintf(str_topic, "pc2bs_r%d", i + 1);
+        pc2bs_pub[i] = nh.advertise<communications::PC2BS>(str_topic, 1);
+    }
+
+    bs2pc_sub = nh.subscribe("bs2pc", 1, cllbckSndMtcast);
 
     tim_routine = nh.createTimer(ros::Duration(0.01), timeCallback);
 
@@ -63,30 +72,103 @@ int main(int argc, char** argv)
 
 void timeCallback(const ros::TimerEvent& event)
 {
+    static uint8_t prev_epoch[5];
+    static communications::PC2BS msg_robot[5];
 
     icast->update();
 
-    size_t offset, size;
-    icast->dc->getOffsetSize(3, "pos", offset, size);
-    memcpy(&my_robot_pose, icast->dc->dictionary_data_.data() + offset, size);
-    pub_server2bs.publish(msg_server2bs);
+    agent1_t agent[3];
+    memcpy(&agent[0], &icast->dc->data_bus.agent1, sizeof(agent1_t));
+    memcpy(&agent[1], &icast->dc->data_bus.agent2, sizeof(agent2_t));
+    memcpy(&agent[2], &icast->dc->data_bus.agent3, sizeof(agent3_t));
+
+    for (size_t i = 0; i < 3; i++) {
+        msg_robot[i].pos_x = agent[i].pos.x;
+        msg_robot[i].pos_y = agent[i].pos.y;
+        msg_robot[i].theta = agent[i].pos.theta;
+
+        if (agent[i].ball.is_caught)
+            msg_robot[i].status_bola = 2;
+        else
+            msg_robot[i].status_bola = agent[i].ball.is_visible;
+
+        msg_robot[i].bola_x = agent[i].ball.x[0];
+        msg_robot[i].bola_y = agent[i].ball.y[0];
+
+        msg_robot[i].robot_condition = agent[i].state_machine.robot_condition;
+
+        msg_robot[i].target_umpan = agent[i].passing.data;
+        msg_robot[i].battery_health = agent[i].battery.voltage;
+
+        msg_robot[i].goalkeeper_field_x = agent[i].keeper_on_field.target_x;
+        msg_robot[i].goalkeeper_field_y = agent[i].keeper_on_field.target_y;
+
+        msg_robot[i].bola_x_next = agent[i].prediction.ball_x;
+        msg_robot[i].bola_y_next = agent[i].prediction.ball_y;
+
+        msg_robot[i].n_robot = i + 1;
+    }
+
+    if (prev_epoch[0] != icast->dc->data_bus.agent1.epoch.data) {
+        pc2bs_pub[0].publish(msg_robot[0]);
+    }
+    if (prev_epoch[1] != icast->dc->data_bus.agent2.epoch.data) {
+        pc2bs_pub[1].publish(msg_robot[1]);
+    }
+    if (prev_epoch[2] != icast->dc->data_bus.agent3.epoch.data) {
+        pc2bs_pub[2].publish(msg_robot[2]);
+    }
+
+    prev_epoch[0] = icast->dc->data_bus.agent1.epoch.data;
+    prev_epoch[1] = icast->dc->data_bus.agent2.epoch.data;
+    prev_epoch[2] = icast->dc->data_bus.agent3.epoch.data;
 }
 
 void setDataToBeSend(Dictionary* dc_ptr)
 {
-    size_t offset, size;
-    dc_ptr->getOffsetSize(1, "pos", offset, size);
-
-    agent_robot_pose.x = 900.0;
-    agent_robot_pose.y = 600.0;
-    agent_robot_pose.theta = 90;
-
-    std::memcpy(dc_ptr->dictionary_data_.data() + offset, &agent_robot_pose, size);
-
-    dc_ptr->setResetUpdate(1, "pos", false, true);
 }
 
-void bsToServerCallback(const communications::bs2server::ConstPtr& msg)
+void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg)
 {
-    command_bs.data = msg->command;
+    mode_base_t mode_base;
+    mode_base.data = (uint8_t)msg->header_manual_and_calibration;
+    icast->dc->setDataToBeSent("mode_base", (void*)&mode_base);
+
+    command_t command;
+    command.data = (uint8_t)msg->command;
+    icast->dc->setDataToBeSent("command", (void*)&command);
+
+    style_t style;
+    style.data = (uint8_t)msg->style;
+    icast->dc->setDataToBeSent("style", (void*)&style);
+
+    target_manual_t target_manual;
+    target_manual.x = msg->target_manual_x;
+    target_manual.y = msg->target_manual_y;
+    target_manual.theta = msg->target_manual_theta;
+    icast->dc->setDataToBeSent("target_manual", (void*)&target_manual);
+
+    offset_robot_t offset_robot;
+    offset_robot.x = msg->offset_robot_x;
+    offset_robot.y = msg->offset_robot_y;
+    offset_robot.theta = msg->offset_robot_theta;
+    icast->dc->setDataToBeSent("offset_robot", (void*)&offset_robot);
+
+    data_mux_t data_mux;
+    data_mux.mux_1 = msg->mux1;
+    data_mux.mux_2 = msg->mux2;
+    data_mux.mux_control = msg->mux_bs_control;
+    icast->dc->setDataToBeSent("data_mux", (void*)&data_mux);
+
+    trim_t trim;
+    for (uint8_t i = 0; i < 5; i++) {
+        trim.translation_vel[i] = msg->control_v_linear[i];
+        trim.rotation_vel[i] = msg->control_v_angular[i];
+        trim.kick_power[i] = msg->control_power_kicker[i];
+    }
+    icast->dc->setDataToBeSent("trim", (void*)&trim);
+
+    pass_counter_t pass_counter;
+    pass_counter.data = msg->passing_counter;
+    icast->dc->setDataToBeSent("pass_counter", (void*)&pass_counter);
 }
