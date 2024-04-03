@@ -135,6 +135,7 @@ void cllbckRcvPC2BS(const communications::PC2BS::ConstPtr &msg)
     pc2bs_msg[robot_ind].pos_obs_length = msg->pos_obs_length;
     pc2bs_msg[robot_ind].pos_obs_x = msg->pos_obs_x;
     pc2bs_msg[robot_ind].pos_obs_y = msg->pos_obs_y;
+    // pc2bs_msg[robot_ind].is_caught = msg ->
 
     entity_robot.is_active[robot_ind] = true;
     std::chrono::seconds time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());

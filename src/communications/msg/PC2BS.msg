@@ -3,9 +3,9 @@ int64 epoch
 int16 pos_x
 int16 pos_y
 int16 theta
-uint8 status_bola
 int16 bola_x
 int16 bola_y
+uint8 status_bola
 int16 robot_condition
 uint8 target_umpan
 uint8 index_point
@@ -15,7 +15,7 @@ uint8[] obs_index
 float32 battery_health
 int16 pos_x_odom
 int16 pos_y_odom
-int16 pos_theta_odom
+float32 pos_theta_odom
 int16 vx_icp
 int16 vy_icp
 int16 bola_x_next
@@ -30,3 +30,5 @@ uint8 pos_obs_length
 int16[] pos_obs_x
 int16[] pos_obs_y
 uint64 mcast_delay
+int8 is_caught
+int8 is_visible
