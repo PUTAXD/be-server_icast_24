@@ -366,12 +366,20 @@ void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg)
     memcpy(send_buf + counter, &msg->passing_counter, data_size);
     counter += data_size;
 
-    for (uint8_t i = 0; i < 6; i++)
-    {
-        data_size = sizeof(int16_t);
-        memcpy(send_buf + counter, &msg->pos_obs[i], data_size);
-        counter += data_size;
-    }
+    // for (uint8_t i = 0; i < 6; i++)
+    // {
+    //     data_size = sizeof(int16_t);
+    //     memcpy(send_buf + counter, &msg->pos_obs[i], data_size);
+    //     counter += data_size;
+    // }
+
+    send_buf[counter] = msg->index_obs[0];
+    counter++;
+    send_buf[counter] = msg->index_obs[1];
+    counter++;
+    send_buf[counter] = msg->index_obs[2];
+    counter++;
+
 
     if (is_multicast)
     {

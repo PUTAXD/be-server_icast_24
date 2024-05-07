@@ -15,3 +15,4 @@ uint8[5] trim_kecepatan_sudut_robot
 uint8[5] trim_penendang_robot
 uint8[5] status_control_robot
 int16[6] pos_obs
+int8[3] index_obs

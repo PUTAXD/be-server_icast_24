@@ -124,11 +124,16 @@ include
 
 add_executable(comm_multicast src/comm_multicast.cpp)
 target_link_libraries(comm_multicast ${YAML_CPP_LIBRARIES} ${catkin_LIBRARIES} icast)
+add_dependencies(comm_multicast communications_generate_messages_cpp)
+
+
+add_executable(comm_multicast_bak src/comm_multicast_bak.cpp)
+target_link_libraries(comm_multicast_bak ${YAML_CPP_LIBRARIES} ${catkin_LIBRARIES})
+add_dependencies(comm_multicast_bak communications_generate_messages_cpp)
 
 # add_executable(comm_native src/comm_native.cpp)
 # target_link_libraries(comm_native ${YAML_CPP_LIBRARIES} ${catkin_LIBRARIES})
 
-add_dependencies(comm_multicast communications_generate_messages_cpp)
 
 # add_dependencies(node_talker src/talker.cpp)
 

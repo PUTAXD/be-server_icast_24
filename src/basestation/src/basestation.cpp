@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     entity_robot.role[3] = 2;
     entity_robot.role[4] = 4;
 
-    timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.05), cllbckSndBS2PC);
+    timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.02), cllbckSndBS2PC);
     timer_update_data = n.createTimer(ros::Duration(0.02), cllbckUpdateData);
     // timer_role = n.createTimer(ros::Duration(0.3), cllbckRole);
 
@@ -821,6 +821,9 @@ void setBS2PC()
         // ROS_INFO("pos obs - %d: %d", i, fe2be_msg.pos_obs[i]);
         bs2pc_msg.pos_obs[i] = fe2be_msg.pos_obs[i];
     }
+    for (int i = 0; i < 3; i++){
+        bs2pc_msg.index_obs[i] = fe2be_msg.index_obs[i];
+    }
 
     // self data for unicast
     for (int i = 0; i < N_ROBOT; i++)
@@ -867,6 +870,9 @@ void setBS2PC()
     {
         bs2pc_msg.target_umpan[i] = pc2bs_msg[i].target_umpan;
     }
+
+    //obs
+
 };
 
 /* Process Data which need sub function */

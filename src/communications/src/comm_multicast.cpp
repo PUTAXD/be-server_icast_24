@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 
     bs2pc_sub = nh.subscribe("bs2pc", 1, cllbckSndMtcast);
 
-    tim_routine = nh.createTimer(ros::Duration(0.02), timeCallback);
+    tim_routine = nh.createTimer(ros::Duration(0.01), timeCallback);
 
     spinner.spin();
 
@@ -93,10 +93,19 @@ void timeCallback(const ros::TimerEvent& event)
 
         // ROS_INFO("%d", msg_robot[i].theta);
 
-        if (agent[i].ball.is_caught)
+        // if (agent[i].ball.is_caught)
+        //     msg_robot[i].status_bola = 2;
+        // else
+        //     msg_robot[i].status_bola = agent[i].ball.is_visible;
+
+        if(msg_robot[i].is_visible == 1 || msg_robot[i].is_visible == 2){
+            msg_robot[i].status_bola = 1;
+        }
+
+        if(msg_robot[i].is_caught == 2){
             msg_robot[i].status_bola = 2;
-        else
-            msg_robot[i].status_bola = agent[i].ball.is_visible;
+        }
+
 
         // if(agent[i].ball.is_visible){
         //     msg_robot[i].status_bola = 1;
@@ -140,6 +149,33 @@ void timeCallback(const ros::TimerEvent& event)
     prev_epoch[0] = icast->dc->data_bus.agent1.epoch.data;
     prev_epoch[1] = icast->dc->data_bus.agent2.epoch.data;
     prev_epoch[2] = icast->dc->data_bus.agent3.epoch.data;
+
+    // printf("Robot 1 : %d \n", msg_robot[0].is_visible);
+    // printf("Robot 2 : %d \n", msg_robot[1].is_visible);
+    // printf("Robot 3 : %d \n", msg_robot[2].is_visible);
+
+    // printf("epoch : %d\n", icast->dc->data_bus.agent2.epoch.data);
+    // printf("pos_x : %d\n", icast->dc->data_bus.agent2.pos.x);
+    // printf("pos_y : %d\n", icast->dc->data_bus.agent2.pos.y);
+
+    // printf("ball x : %d\n", *icast->dc->data_bus.agent2.ball.x);
+    // printf("ball y : %d\n", *icast->dc->data_bus.agent2.ball.y);
+    // printf("ball vy :%d\n", *icast->dc->data_bus.agent2.ball.vy);
+    // printf("ball vx : %d\n", *icast->dc->data_bus.agent2.ball.vx);
+
+    // printf("ball vx : %d\n", icast->dc->data_bus.agent2.battery.voltage);
+    // printf("ball vx : %d\n", *icast->dc->data_bus.agent2.obstacle.pcl_x);
+    // printf("ball vx : %d\n", *icast->dc->data_bus.agent2.obstacle.pcl_y);
+
+    // printf("\n");
+    // printf("\n");
+    // printf("%d\n", icast->dc->data_bus.agent1.epoch.data);
+    // printf("%d\n", icast->dc->data_bus.agent3.epoch.data);
+
+
+    // printf("%d\n", icast->dc->data_bus.agent2.pos.x);
+    // printf("%d\n", icast->dc->data_bus.agent2.pos.y);
+    
 }
 
 void setDataToBeSend(Dictionary* dc_ptr)
@@ -189,6 +225,18 @@ void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg)
     pass_counter_t pass_counter;
     pass_counter.data = msg->passing_counter;
     icast->dc->setDataToBeSent("pass_counter", (void*)&pass_counter);
+
+    index_obs_t index_obs;
+    for(int i = 0; i < 3; i++){
+        index_obs.data[i] = msg->index_obs[i];
+    }
+    icast->dc->setDataToBeSent("index_obs",(void*)&index_obs);
+
+    // printf("obs : ");
+    // for(int i = 0;i<3;i++)
+    //     printf(" %d ", msg->index_obs[i]);
+    // printf("\n");
+
 }
 
 
@@ -196,9 +244,13 @@ void set_dummy_datas(){
 
     static uint8_t epoch[3]={0,0,0};
 
-    icast->dc->data_bus.agent1.pos.x = 54;
-    icast->dc->data_bus.agent1.pos.y = 54;
-    icast->dc->data_bus.agent1.pos.theta = 100;
+    static float ahh = 0;
+
+    icast->dc->data_bus.agent1.pos.x = 0;
+    icast->dc->data_bus.agent1.pos.y = (int16_t)ahh;
+    icast->dc->data_bus.agent1.pos.theta = 0;
+
+    ahh+=0.3;
 
     icast->dc->data_bus.agent1.epoch.data = epoch[0];
     icast->dc->data_bus.agent2.epoch.data = epoch[1];

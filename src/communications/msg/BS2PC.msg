@@ -17,6 +17,7 @@ uint8[5] control_v_angular
 uint8[5] control_power_kicker
 uint8 passing_counter
 int16[6] pos_obs
+int8[3] index_obs
 uint8[5] status_active
 int16[5] pos_x
 int16[5] pos_y
