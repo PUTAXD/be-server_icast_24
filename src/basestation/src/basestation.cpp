@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     entity_robot.role[3] = 2;
     entity_robot.role[4] = 4;
 
-    timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.02), cllbckSndBS2PC);
+    timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.001), cllbckSndBS2PC);
     timer_update_data = n.createTimer(ros::Duration(0.02), cllbckUpdateData);
     // timer_role = n.createTimer(ros::Duration(0.3), cllbckRole);
 

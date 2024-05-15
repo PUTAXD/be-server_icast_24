@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 
     bs2pc_sub = nh.subscribe("bs2pc", 1, cllbckSndMtcast);
 
-    tim_routine = nh.createTimer(ros::Duration(0.01), timeCallback);
+    tim_routine = nh.createTimer(ros::Duration(0.0001), timeCallback);
 
     spinner.spin();
 
@@ -79,7 +79,7 @@ void timeCallback(const ros::TimerEvent& event)
 
     icast->update(); //update data
 ///asdasdasdasd
-    // set_dummy_datas();
+    set_dummy_datas();
 
     agent1_t agent[3];
     memcpy(&agent[0], &icast->dc->data_bus.agent1, sizeof(agent1_t));
@@ -247,10 +247,10 @@ void set_dummy_datas(){
     static float ahh = 0;
 
     icast->dc->data_bus.agent1.pos.x = 0;
-    icast->dc->data_bus.agent1.pos.y = (int16_t)ahh;
+    icast->dc->data_bus.agent1.pos.y = (int16_t)ahh % 600;
     icast->dc->data_bus.agent1.pos.theta = 0;
 
-    ahh+=0.3;
+    ahh+=0.6;
 
     icast->dc->data_bus.agent1.epoch.data = epoch[0];
     icast->dc->data_bus.agent2.epoch.data = epoch[1];
@@ -261,9 +261,18 @@ void set_dummy_datas(){
 
     icast->dc->data_bus.agent1.battery.voltage = 50;
     icast->dc->data_bus.agent1.ball.is_visible = 1;
+    icast->dc->data_bus.agent2.ball.is_visible = 1;
+
 
     icast->dc->data_bus.agent2.pos.x = 90;
-    icast->dc->data_bus.agent2.pos.y = 77;
+    icast->dc->data_bus.agent2.pos.y = (int16_t) ahh;
+
+    icast->dc->data_bus.agent3.pos.y = (int16_t) ahh;
+    icast->dc->data_bus.agent3.pos.x = (int16_t) 300;
+
+
+    icast->dc->data_bus.agent2.prediction.ball_x = 100;
+    icast->dc->data_bus.agent2.prediction.ball_y = 100;
 
 
     epoch[0]++;
