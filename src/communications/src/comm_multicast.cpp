@@ -79,7 +79,7 @@ void timeCallback(const ros::TimerEvent& event)
 
     icast->update(); //update data
 ///asdasdasdasd
-    set_dummy_datas();
+    // set_dummy_datas();
 
     agent1_t agent[3];
     memcpy(&agent[0], &icast->dc->data_bus.agent1, sizeof(agent1_t));
@@ -100,6 +100,8 @@ void timeCallback(const ros::TimerEvent& event)
 
         if(msg_robot[i].is_visible == 1 || msg_robot[i].is_visible == 2){
             msg_robot[i].status_bola = 1;
+        }else{
+            msg_robot[i].status_bola = 0;
         }
 
         if(msg_robot[i].is_caught == 2){

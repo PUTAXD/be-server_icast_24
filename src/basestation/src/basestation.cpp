@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
 
     entity_robot.role[0] = 0; // default: kiper
     entity_robot.role[1] = 1; // default: att
-    entity_robot.role[2] = 3; // default: defen
-    entity_robot.role[3] = 2;
+    entity_robot.role[2] = 2; // default: defen
+    entity_robot.role[3] = 3;
     entity_robot.role[4] = 4;
 
     timer_cllbck_bs2pc = n.createTimer(ros::Duration(0.001), cllbckSndBS2PC);
@@ -440,13 +440,13 @@ void setRole()
     {
         if (isRobotReady(2))
         {
-            entity_robot.role[1] = 3;
-            entity_robot.role[2] = 1;
+            entity_robot.role[1] = 1;
+            entity_robot.role[2] = 2;
         }
         if (isRobotReady(1))
         {
-            entity_robot.role[1] = 1;
-            entity_robot.role[2] = 3;
+            entity_robot.role[1] = 2;
+            entity_robot.role[2] = 1;
         }
     }
     else
@@ -455,13 +455,13 @@ void setRole()
         {
             if (isRobotReady(2))
             {
-                entity_robot.role[1] = 3;
-                entity_robot.role[2] = 1;
+                entity_robot.role[1] = 1;
+                entity_robot.role[2] = 2;
             }
             if (isRobotReady(1))
             {
-                entity_robot.role[1] = 1;
-                entity_robot.role[2] = 3;
+                entity_robot.role[1] = 2;
+                entity_robot.role[2] = 1;
             }
         }
         else if (cllction_data.n_robot_ready == 2)
@@ -485,21 +485,21 @@ void setRole()
             float jarak_ = pythagoras(pos_x, pos_y, cllction_data.bola_x_pada_lapangan, cllction_data.bola_y_pada_lapangan);
 
             uint8_t n_robot_attacker = -1;
-            uint8_t n_robot_assist = -1;
+            uint8_t n_robot_def_1 = -1;
 
             for (int i = 0; i < N_ROBOT; i++)
             {
                 if (entity_robot.role[i] == 1)
                     n_robot_attacker = i + 1; // Nama Robot Sebenarnya
-                if (entity_robot.role[i] == 3)
-                    n_robot_assist = i + 1; // Nama Robot Sebenarnya
+                if (entity_robot.role[i] == 2)
+                    n_robot_def_1 = i + 1; // Nama Robot Sebenarnya
             }
 
             if (jarak_ > 125 && cllction_data.n_robot_dapat_bola == n_robot_attacker)
             {
                 uint8_t role_buffer = entity_robot.role[n_robot_attacker - 1];
-                entity_robot.role[n_robot_attacker - 1] = entity_robot.role[n_robot_assist - 1];
-                entity_robot.role[n_robot_assist - 1] = role_buffer;
+                entity_robot.role[n_robot_attacker - 1] = entity_robot.role[n_robot_def_1 - 1];
+                entity_robot.role[n_robot_def_1 - 1] = role_buffer;
             }
         }
     }
