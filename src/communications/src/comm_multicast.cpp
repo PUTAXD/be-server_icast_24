@@ -267,14 +267,14 @@ void set_dummy_datas(){
 
 
     icast->dc->data_bus.agent2.pos.x = 90;
-    icast->dc->data_bus.agent2.pos.y = (int16_t) ahh;
+    // icast->dc->data_bus.agent2.pos.y = (int16_t) ahh;
 
-    icast->dc->data_bus.agent3.pos.y = (int16_t) ahh;
+    // icast->dc->data_bus.agent3.pos.y = (int16_t) ahh;
     icast->dc->data_bus.agent3.pos.x = (int16_t) 300;
 
 
-    icast->dc->data_bus.agent2.prediction.ball_x = 100;
-    icast->dc->data_bus.agent2.prediction.ball_y = 100;
+    icast->dc->data_bus.agent2.prediction.ball_x = 0;
+    icast->dc->data_bus.agent2.prediction.ball_y = 0;
 
 
     epoch[0]++;

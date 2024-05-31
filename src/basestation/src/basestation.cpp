@@ -156,10 +156,10 @@ void cllbckSndBS2PC(const ros::TimerEvent &event)
 {
     entity_robot_pub.publish(entity_robot);
     cllction_pub.publish(cllction_data);
-    // if (isSendToPC())
-    // {
+    if (isSendToPC())
+    {
     bs2pc_pub.publish(bs2pc_msg);
-    // }
+    }
 }
 
 /* Update/setter Data Global */
@@ -445,8 +445,8 @@ void setRole()
         }
         if (isRobotReady(1))
         {
-            entity_robot.role[1] = 2;
-            entity_robot.role[2] = 1;
+            entity_robot.role[1] = 1;
+            entity_robot.role[2] = 2;
         }
     }
     else
@@ -460,8 +460,8 @@ void setRole()
             }
             if (isRobotReady(1))
             {
-                entity_robot.role[1] = 2;
-                entity_robot.role[2] = 1;
+                entity_robot.role[1] = 1;
+                entity_robot.role[2] = 2;
             }
         }
         else if (cllction_data.n_robot_ready == 2)
