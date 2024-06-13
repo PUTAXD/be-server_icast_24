@@ -26,12 +26,12 @@ ros::Subscriber fe2be_sub;
 ros::Timer tim_routine;
 
 //--Singleton Initialization
-Icast* icast = Icast::getInstance();
+Icast *icast = Icast::getInstance();
 
 //--Prototypes
-void timeCallback(const ros::TimerEvent& event);
-void setDataToBeSend(Dictionary* dc_ptr);
-void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg);
+void timeCallback(const ros::TimerEvent &event);
+void setDataToBeSend(Dictionary *dc_ptr);
+void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg);
 
 //-Global Variables
 command_t command_bs;
@@ -43,7 +43,7 @@ basestation::FE2BE fe2be_msg;
 
 void set_dummy_datas();
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     ros::init(argc, argv, "comm_multicast");
     ros::NodeHandle nh;
@@ -51,13 +51,15 @@ int main(int argc, char** argv)
 
     icast->init();
 
-    if (!icast->mc->initialized()) {
+    if (!icast->mc->initialized())
+    {
         std::cout << "Multicast not ready" << std::endl;
         ros::shutdown();
         return 0;
     }
 
-    for (int i = 0; i < N_ROBOT; i++) {
+    for (int i = 0; i < N_ROBOT; i++)
+    {
         char str_topic[100];
         sprintf(str_topic, "pc2bs_r%d", i + 1);
         pc2bs_pub[i] = nh.advertise<communications::PC2BS>(str_topic, 1);
@@ -72,13 +74,13 @@ int main(int argc, char** argv)
     return 0;
 }
 
-void timeCallback(const ros::TimerEvent& event)
+void timeCallback(const ros::TimerEvent &event)
 {
     static uint8_t prev_epoch[5];
     static communications::PC2BS msg_robot[5];
 
-    icast->update(); //update data
-///asdasdasdasd
+    icast->update(); // update data
+
     // set_dummy_datas();
 
     agent1_t agent[3];
@@ -86,7 +88,13 @@ void timeCallback(const ros::TimerEvent& event)
     memcpy(&agent[1], &icast->dc->data_bus.agent2, sizeof(agent2_t));
     memcpy(&agent[2], &icast->dc->data_bus.agent3, sizeof(agent3_t));
 
-    for (size_t i = 0; i < 3; i++) {
+    for (size_t i = 0; i < 3; i++)
+    {
+        msg_robot[i].pos_obs_x.reserve(10);
+        msg_robot[i].pos_obs_y.reserve(10);
+        msg_robot[i].pos_obs_x.resize(10);
+        msg_robot[i].pos_obs_y.resize(10);
+
         msg_robot[i].pos_x = agent[i].pos.x;
         msg_robot[i].pos_y = agent[i].pos.y;
         msg_robot[i].theta = (int16_t)agent[i].pos.theta;
@@ -98,16 +106,19 @@ void timeCallback(const ros::TimerEvent& event)
         // else
         //     msg_robot[i].status_bola = agent[i].ball.is_visible;
 
-        if(msg_robot[i].is_visible == 1 || msg_robot[i].is_visible == 2){
+        if (msg_robot[i].is_visible == 1 || msg_robot[i].is_visible == 2)
+        {
             msg_robot[i].status_bola = 1;
-        }else{
+        }
+        else
+        {
             msg_robot[i].status_bola = 0;
         }
 
-        if(msg_robot[i].is_caught == 2){
+        if (msg_robot[i].is_caught == 2)
+        {
             msg_robot[i].status_bola = 2;
         }
-
 
         // if(agent[i].ball.is_visible){
         //     msg_robot[i].status_bola = 1;
@@ -136,15 +147,26 @@ void timeCallback(const ros::TimerEvent& event)
 
         msg_robot[i].n_robot = i + 1;
 
+        msg_robot[i].target_positioning_x = agent[i].target_positioning.x;
+        msg_robot[i].target_positioning_y = agent[i].target_positioning.y;
+
+        for (int j = 0; j < 10; j++)
+        {
+            msg_robot[i].pos_obs_x[j] = agent[i].obstacle.pcl_x[j];
+            msg_robot[i].pos_obs_y[j] = agent[i].obstacle.pcl_y[j];
+        }
     }
 
-    if (prev_epoch[0] != icast->dc->data_bus.agent1.epoch.data) {
+    if (prev_epoch[0] != icast->dc->data_bus.agent1.epoch.data)
+    {
         pc2bs_pub[0].publish(msg_robot[0]);
     }
-    if (prev_epoch[1] != icast->dc->data_bus.agent2.epoch.data) {
+    if (prev_epoch[1] != icast->dc->data_bus.agent2.epoch.data)
+    {
         pc2bs_pub[1].publish(msg_robot[1]);
     }
-    if (prev_epoch[2] != icast->dc->data_bus.agent3.epoch.data) {
+    if (prev_epoch[2] != icast->dc->data_bus.agent3.epoch.data)
+    {
         pc2bs_pub[2].publish(msg_robot[2]);
     }
 
@@ -174,85 +196,84 @@ void timeCallback(const ros::TimerEvent& event)
     // printf("%d\n", icast->dc->data_bus.agent1.epoch.data);
     // printf("%d\n", icast->dc->data_bus.agent3.epoch.data);
 
-
     // printf("%d\n", icast->dc->data_bus.agent2.pos.x);
     // printf("%d\n", icast->dc->data_bus.agent2.pos.y);
-    
 }
 
-void setDataToBeSend(Dictionary* dc_ptr)
+void setDataToBeSend(Dictionary *dc_ptr)
 {
 }
 
-void cllbckSndMtcast(const communications::BS2PC::ConstPtr& msg)
+void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg)
 {
     mode_base_t mode_base;
     mode_base.data = (uint8_t)msg->header_manual_and_calibration;
-    icast->dc->setDataToBeSent("mode_base", (void*)&mode_base);
+    icast->dc->setDataToBeSent("mode_base", (void *)&mode_base);
 
     command_t command;
     command.data = (uint8_t)msg->command;
-    icast->dc->setDataToBeSent("command", (void*)&command);
+    icast->dc->setDataToBeSent("command", (void *)&command);
 
     style_t style;
     style.data = (uint8_t)msg->style;
-    icast->dc->setDataToBeSent("style", (void*)&style);
+    icast->dc->setDataToBeSent("style", (void *)&style);
 
     target_manual_t target_manual;
     target_manual.x = msg->target_manual_x;
     target_manual.y = msg->target_manual_y;
     target_manual.theta = msg->target_manual_theta;
-    icast->dc->setDataToBeSent("target_manual", (void*)&target_manual);
+    icast->dc->setDataToBeSent("target_manual", (void *)&target_manual);
 
     offset_robot_t offset_robot;
     offset_robot.x = msg->offset_robot_x;
     offset_robot.y = msg->offset_robot_y;
     offset_robot.theta = msg->offset_robot_theta;
-    icast->dc->setDataToBeSent("offset_robot", (void*)&offset_robot);
+    icast->dc->setDataToBeSent("offset_robot", (void *)&offset_robot);
 
     data_mux_t data_mux;
     data_mux.mux_1 = msg->mux1;
     data_mux.mux_2 = msg->mux2;
     data_mux.mux_control = msg->mux_bs_control;
-    icast->dc->setDataToBeSent("data_mux", (void*)&data_mux);
+    icast->dc->setDataToBeSent("data_mux", (void *)&data_mux);
 
     trim_t trim;
-    for (uint8_t i = 0; i < 5; i++) {
+    for (uint8_t i = 0; i < 5; i++)
+    {
         trim.translation_vel[i] = msg->control_v_linear[i];
         trim.rotation_vel[i] = msg->control_v_angular[i];
         trim.kick_power[i] = msg->control_power_kicker[i];
     }
-    icast->dc->setDataToBeSent("trim", (void*)&trim);
+    icast->dc->setDataToBeSent("trim", (void *)&trim);
 
     pass_counter_t pass_counter;
     pass_counter.data = msg->passing_counter;
-    icast->dc->setDataToBeSent("pass_counter", (void*)&pass_counter);
+    icast->dc->setDataToBeSent("pass_counter", (void *)&pass_counter);
 
     index_obs_t index_obs;
-    for(int i = 0; i < 3; i++){
+    for (int i = 0; i < 3; i++)
+    {
         index_obs.data[i] = msg->index_obs[i];
     }
-    icast->dc->setDataToBeSent("index_obs",(void*)&index_obs);
+    icast->dc->setDataToBeSent("index_obs", (void *)&index_obs);
 
     // printf("obs : ");
     // for(int i = 0;i<3;i++)
     //     printf(" %d ", msg->index_obs[i]);
     // printf("\n");
-
 }
 
+void set_dummy_datas()
+{
 
-void set_dummy_datas(){
-
-    static uint8_t epoch[3]={0,0,0};
+    static uint8_t epoch[3] = {0, 0, 0};
 
     static float ahh = 0;
 
-    icast->dc->data_bus.agent1.pos.x = 0;
-    icast->dc->data_bus.agent1.pos.y = (int16_t)ahh % 600;
-    icast->dc->data_bus.agent1.pos.theta = 0;
+    icast->dc->data_bus.agent1.pos.x = 25;
+    icast->dc->data_bus.agent3.pos.y = (int16_t)ahh % 600;
+    icast->dc->data_bus.agent1.pos.theta = 90;
 
-    ahh+=0.6;
+    ahh += 0.6;
 
     icast->dc->data_bus.agent1.epoch.data = epoch[0];
     icast->dc->data_bus.agent2.epoch.data = epoch[1];
@@ -263,19 +284,16 @@ void set_dummy_datas(){
 
     icast->dc->data_bus.agent1.battery.voltage = 50;
     icast->dc->data_bus.agent1.ball.is_visible = 1;
-    icast->dc->data_bus.agent2.ball.is_visible = 1;
-
+    icast->dc->data_bus.agent2.ball.is_caught = 2;
 
     icast->dc->data_bus.agent2.pos.x = 90;
     // icast->dc->data_bus.agent2.pos.y = (int16_t) ahh;
 
     // icast->dc->data_bus.agent3.pos.y = (int16_t) ahh;
-    icast->dc->data_bus.agent3.pos.x = (int16_t) 300;
-
+    icast->dc->data_bus.agent3.pos.x = (int16_t)300;
 
     icast->dc->data_bus.agent2.prediction.ball_x = 0;
     icast->dc->data_bus.agent2.prediction.ball_y = 0;
-
 
     epoch[0]++;
     epoch[1]++;

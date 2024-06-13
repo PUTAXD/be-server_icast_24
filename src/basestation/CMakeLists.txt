@@ -88,8 +88,11 @@ include
 
 add_executable(basestation src/basestation.cpp)
 target_link_libraries(basestation ${catkin_LIBRARIES})
-
 add_dependencies(basestation communications_generate_messages_cpp)
+
+add_executable(refbox_auto_2024 src/refbox_auto_2024.cpp)
+target_link_libraries(refbox_auto_2024 ${catkin_LIBRARIES})
+add_dependencies(refbox_auto_2024 communications_generate_messages_cpp)
 
 
 

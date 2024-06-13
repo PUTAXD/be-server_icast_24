@@ -2,7 +2,6 @@ bool header_manual
 int32 command
 int32 style
 bool auto_kalibrasi
-bool connect_refbox
 uint8 n_robot_manual
 int16 target_manual_x
 int16 target_manual_y

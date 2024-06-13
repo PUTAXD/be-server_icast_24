@@ -158,7 +158,7 @@ void cllbckSndBS2PC(const ros::TimerEvent &event)
     cllction_pub.publish(cllction_data);
     if (isSendToPC())
     {
-    bs2pc_pub.publish(bs2pc_msg);
+        bs2pc_pub.publish(bs2pc_msg);
     }
 }
 
@@ -821,7 +821,8 @@ void setBS2PC()
         // ROS_INFO("pos obs - %d: %d", i, fe2be_msg.pos_obs[i]);
         bs2pc_msg.pos_obs[i] = fe2be_msg.pos_obs[i];
     }
-    for (int i = 0; i < 3; i++){
+    for (int i = 0; i < 3; i++)
+    {
         bs2pc_msg.index_obs[i] = fe2be_msg.index_obs[i];
     }
 
@@ -871,8 +872,7 @@ void setBS2PC()
         bs2pc_msg.target_umpan[i] = pc2bs_msg[i].target_umpan;
     }
 
-    //obs
-
+    // obs
 };
 
 /* Process Data which need sub function */
@@ -1416,7 +1416,7 @@ uint8_t isConditionExist(int cond_number)
 uint8_t isRobotReady(uint8_t index_robot)
 {
     uint8_t is_robot_ready = 0;
-    if (entity_robot.is_active[index_robot] && fe2be_msg.status_control_robot[index_robot])
+    if (entity_robot.is_active[index_robot] /*&& fe2be_msg.status_control_robot[index_robot]*/)
     // if (entity_robot.is_active[index_robot])
     {
         is_robot_ready = 1;

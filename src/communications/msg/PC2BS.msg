@@ -32,3 +32,5 @@ int16[] pos_obs_y
 uint64 mcast_delay
 int8 is_caught
 int8 is_visible
+int16 target_positioning_x
+int16 target_positioning_y

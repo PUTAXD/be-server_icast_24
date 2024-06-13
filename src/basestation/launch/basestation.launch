@@ -10,4 +10,7 @@
     <!-- <node name="comm_native" pkg="communications" type="comm_native" output="screen" respawn="true"/> -->
     
     <!-- <node name="comm_boost" pkg="communications" type="comm_boost" output="screen" respawn="true"/> -->
+
+    <!-- <node name="refbox_auto_2024" pkg="basestation" type="refbox_auto_2024" output="screen" respawn="true"/> -->
+
 </launch>   
