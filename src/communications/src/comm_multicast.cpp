@@ -23,13 +23,16 @@ ros::Subscriber entity_sub;
 ros::Subscriber fe2be_sub;
 
 //--Timer
-ros::Timer tim_routine;
+ros::Timer tim_send;
+ros::Timer tim_recv;
 
 //--Singleton Initialization
 Icast *icast = Icast::getInstance();
 
 //--Prototypes
-void timeCallback(const ros::TimerEvent &event);
+void CallbackSend(const ros::TimerEvent &event);
+void CallbackRecv(const ros::TimerEvent &event);
+
 void setDataToBeSend(Dictionary *dc_ptr);
 void cllbckSndMtcast(const communications::BS2PC::ConstPtr &msg);
 
@@ -67,19 +70,25 @@ int main(int argc, char **argv)
 
     bs2pc_sub = nh.subscribe("bs2pc", 1, cllbckSndMtcast);
 
-    tim_routine = nh.createTimer(ros::Duration(0.0001), timeCallback);
+    // tim_send = nh.createTimer(ros::Duration(0.0001), CallbackSend);
+    tim_recv = nh.createTimer(ros::Duration(0.0001), CallbackRecv);
 
     spinner.spin();
 
     return 0;
 }
 
-void timeCallback(const ros::TimerEvent &event)
+void CallbackSend(const ros::TimerEvent &event)
+{
+    icast->update_send(); // update data
+}
+
+void CallbackRecv(const ros::TimerEvent &event)
 {
     static uint8_t prev_epoch[5];
     static communications::PC2BS msg_robot[5];
 
-    icast->update(); // update data
+    icast->update();
 
     // set_dummy_datas();
 
@@ -173,31 +182,6 @@ void timeCallback(const ros::TimerEvent &event)
     prev_epoch[0] = icast->dc->data_bus.agent1.epoch.data;
     prev_epoch[1] = icast->dc->data_bus.agent2.epoch.data;
     prev_epoch[2] = icast->dc->data_bus.agent3.epoch.data;
-
-    // printf("Robot 1 : %d \n", msg_robot[0].is_visible);
-    // printf("Robot 2 : %d \n", msg_robot[1].is_visible);
-    // printf("Robot 3 : %d \n", msg_robot[2].is_visible);
-
-    // printf("epoch : %d\n", icast->dc->data_bus.agent2.epoch.data);
-    // printf("pos_x : %d\n", icast->dc->data_bus.agent2.pos.x);
-    // printf("pos_y : %d\n", icast->dc->data_bus.agent2.pos.y);
-
-    // printf("ball x : %d\n", *icast->dc->data_bus.agent2.ball.x);
-    // printf("ball y : %d\n", *icast->dc->data_bus.agent2.ball.y);
-    // printf("ball vy :%d\n", *icast->dc->data_bus.agent2.ball.vy);
-    // printf("ball vx : %d\n", *icast->dc->data_bus.agent2.ball.vx);
-
-    // printf("ball vx : %d\n", icast->dc->data_bus.agent2.battery.voltage);
-    // printf("ball vx : %d\n", *icast->dc->data_bus.agent2.obstacle.pcl_x);
-    // printf("ball vx : %d\n", *icast->dc->data_bus.agent2.obstacle.pcl_y);
-
-    // printf("\n");
-    // printf("\n");
-    // printf("%d\n", icast->dc->data_bus.agent1.epoch.data);
-    // printf("%d\n", icast->dc->data_bus.agent3.epoch.data);
-
-    // printf("%d\n", icast->dc->data_bus.agent2.pos.x);
-    // printf("%d\n", icast->dc->data_bus.agent2.pos.y);
 }
 
 void setDataToBeSend(Dictionary *dc_ptr)

@@ -168,7 +168,7 @@ void setNRobotData()
 {
     std::chrono::seconds time_now =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
-    uint8_t timeout = 1;
+    uint8_t timeout = 2;
 
     for (uint8_t i = 0; i < N_ROBOT; i++)
     {
@@ -467,7 +467,7 @@ void setRole()
     }
     else
     {
-        printf("GAK AKAN MASUK SINI\n");
+
         if (cllction_data.n_robot_ready == 1)
         {
             if (isRobotReady(2))
