@@ -436,7 +436,7 @@ void setRole()
     //     entity_robot.role[0] = 0;
     // }
 
-    if (fe2be_msg.style == 66 || fe2be_msg.style == 67 || fe2be_msg.style == 68 || fe2be_msg.style == 70)
+    if (fe2be_msg.style == 66 || fe2be_msg.style == 67 || fe2be_msg.style == 68 || fe2be_msg.style == 70 || fe2be_msg.style == 71)
     {
         if (cllction_data.n_robot_ready == 1)
         {
