@@ -442,26 +442,26 @@ void setRole()
         {
             if (isRobotReady(2))
             {
-                entity_robot.role[1] = 2;
-                entity_robot.role[2] = 1;
+                entity_robot.role[1] = 1;
+                entity_robot.role[2] = 2;
             }
             if (isRobotReady(1))
             {
-                entity_robot.role[1] = 1;
-                entity_robot.role[2] = 2;
+                entity_robot.role[1] = 2;
+                entity_robot.role[2] = 1;
             }
         }
         else
         {
             if (isRobotReady(2))
             {
-                entity_robot.role[1] = 1;
-                entity_robot.role[2] = 2;
+                entity_robot.role[1] = 2;
+                entity_robot.role[2] = 1;
             }
             if (isRobotReady(1))
             {
-                entity_robot.role[1] = 1;
-                entity_robot.role[2] = 2;
+                entity_robot.role[1] = 2;
+                entity_robot.role[2] = 1;
             }
         }
     }
@@ -472,13 +472,13 @@ void setRole()
         {
             if (isRobotReady(2))
             {
-                entity_robot.role[1] = 2;
-                entity_robot.role[2] = 1;
+                entity_robot.role[1] = 1;
+                entity_robot.role[2] = 2;
             }
             if (isRobotReady(1))
             {
-                entity_robot.role[1] = 1;
-                entity_robot.role[2] = 2;
+                entity_robot.role[1] = 2;
+                entity_robot.role[2] = 1;
             }
         }
         else if (cllction_data.n_robot_ready == 2)
