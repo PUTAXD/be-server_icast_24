@@ -436,32 +436,35 @@ void setRole()
     //     entity_robot.role[0] = 0;
     // }
 
+    static uint8_t role_robot_1 = 1;
+    static uint8_t role_robot_2 = 2;
+
     if (fe2be_msg.style == 66 || fe2be_msg.style == 67 || fe2be_msg.style == 68 || fe2be_msg.style == 70 || fe2be_msg.style == 71)
     {
         if (cllction_data.n_robot_ready == 1)
         {
             if (isRobotReady(2))
             {
-                entity_robot.role[1] = 1;
-                entity_robot.role[2] = 2;
+                entity_robot.role[1] = 2;
+                entity_robot.role[2] = 1;
             }
             if (isRobotReady(1))
             {
-                entity_robot.role[1] = 2;
-                entity_robot.role[2] = 1;
+                entity_robot.role[1] = 1;
+                entity_robot.role[2] = 2;
             }
         }
         else
         {
             if (isRobotReady(2))
             {
-                entity_robot.role[1] = 2;
-                entity_robot.role[2] = 1;
+                entity_robot.role[1] = role_robot_1;
+                entity_robot.role[2] = role_robot_2;
             }
             if (isRobotReady(1))
             {
-                entity_robot.role[1] = 2;
-                entity_robot.role[2] = 1;
+                entity_robot.role[1] = role_robot_1;
+                entity_robot.role[2] = role_robot_2;
             }
         }
     }
@@ -472,13 +475,13 @@ void setRole()
         {
             if (isRobotReady(2))
             {
-                entity_robot.role[1] = 1;
-                entity_robot.role[2] = 2;
+                entity_robot.role[1] = 2;
+                entity_robot.role[2] = 1;
             }
             if (isRobotReady(1))
             {
-                entity_robot.role[1] = 2;
-                entity_robot.role[2] = 1;
+                entity_robot.role[1] = 1;
+                entity_robot.role[2] = 2;
             }
         }
         else if (cllction_data.n_robot_ready == 2)
@@ -521,6 +524,24 @@ void setRole()
         }
     }
 
+    static bool prev_fe2be_msg_is_swap = false;
+    if (cllction_data.n_robot_ready == 2 && fe2be_msg.is_swap != prev_fe2be_msg_is_swap)
+    {
+        if (role_robot_1 == 2)
+            role_robot_1 = 1;
+        else if (role_robot_1 == 1)
+            role_robot_1 = 2;
+
+        if (role_robot_2 == 1)
+            role_robot_2 = 2;
+        else if (role_robot_2 == 2)
+            role_robot_2 = 1;
+
+        entity_robot.role[1] = role_robot_1;
+        entity_robot.role[2] = role_robot_2;
+    }
+
+    prev_fe2be_msg_is_swap = fe2be_msg.is_swap;
     // entity_robot.role[0] = 0; // 1
     // entity_robot.role[1] = 1; // 2
     // entity_robot.role[2] = 3;

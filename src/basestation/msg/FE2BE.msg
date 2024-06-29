@@ -1,4 +1,5 @@
 bool header_manual
+bool is_swap
 int32 command
 int32 style
 bool auto_kalibrasi

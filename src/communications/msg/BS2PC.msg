@@ -1,3 +1,4 @@
+bool is_swap
 int8 header_manual_and_calibration
 int8 command
 int8 style
